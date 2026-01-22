@@ -19,6 +19,8 @@ export interface IStorage {
   getUsuario(id: number): Promise<Usuario | undefined>;
   getUsuarioPorEmail(email: string): Promise<Usuario | undefined>;
   criarUsuario(data: InsertUsuario): Promise<Usuario>;
+  getUsuarios(): Promise<Usuario[]>;
+  getTodasTurmas(): Promise<Turma[]>;
 
   // Turmas
   getTurmas(professorId: number): Promise<Turma[]>;
@@ -56,6 +58,14 @@ export class DatabaseStorage implements IStorage {
   async criarUsuario(data: InsertUsuario): Promise<Usuario> {
     const [user] = await db.insert(usuarios).values(data).returning();
     return user;
+  }
+
+  async getUsuarios(): Promise<Usuario[]> {
+    return await db.select().from(usuarios);
+  }
+
+  async getTodasTurmas(): Promise<Turma[]> {
+    return await db.select().from(turmas);
   }
 
   async getTurmas(professorId: number): Promise<Turma[]> {

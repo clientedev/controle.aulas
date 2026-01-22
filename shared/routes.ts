@@ -54,6 +54,26 @@ export const api = {
         401: z.object({ mensagem: z.string() }),
       },
     },
+    listarUsuarios: {
+      method: 'GET' as const,
+      path: '/api/usuarios',
+      responses: {
+        200: z.array(z.custom<typeof usuarios.$inferSelect>()),
+        401: z.object({ mensagem: z.string() }),
+        403: z.object({ mensagem: z.string() }),
+      },
+    },
+    criarProfessor: {
+      method: 'POST' as const,
+      path: '/api/usuarios/professores',
+      input: insertUsuarioSchema.omit({ id: true, perfil: true, criadoEm: true }),
+      responses: {
+        201: z.custom<typeof usuarios.$inferSelect>(),
+        400: esquemasErro.validacao,
+        401: z.object({ mensagem: z.string() }),
+        403: z.object({ mensagem: z.string() }),
+      },
+    },
   },
   turmas: {
     listar: {

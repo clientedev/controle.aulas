@@ -79,7 +79,11 @@ export default function Dashboard() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Painel de Controle</h1>
-            <p className="text-muted-foreground mt-1">Gerencie suas turmas e acompanhe o progresso dos alunos.</p>
+            <p className="text-muted-foreground mt-1">
+              {useAuth().user?.perfil === "admin" 
+                ? "Visualizando todas as turmas do sistema." 
+                : "Gerencie suas turmas e acompanhe o progresso dos alunos."}
+            </p>
           </div>
           
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

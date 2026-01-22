@@ -58,8 +58,36 @@ export async function registerRoutes(
     res.json(usuario);
   });
 
+  app.get("/api/usuarios", autenticar, async (req: any, res) => {
+    const usuario = await storage.getUsuario(req.session.usuarioId);
+    if (usuario?.perfil !== "admin") {
+      return res.status(403).json({ mensagem: "Acesso negado" });
+    }
+    const lista = await storage.getUsuarios();
+    res.json(lista);
+  });
+
+  app.post("/api/usuarios/professores", autenticar, async (req: any, res) => {
+    const usuario = await storage.getUsuario(req.session.usuarioId);
+    if (usuario?.perfil !== "admin") {
+      return res.status(403).json({ mensagem: "Acesso negado" });
+    }
+    try {
+      const input = req.body;
+      const novoProfessor = await storage.criarUsuario({ ...input, perfil: "professor" });
+      res.status(201).json(novoProfessor);
+    } catch (err) {
+      res.status(400).json({ mensagem: "Erro ao criar professor" });
+    }
+  });
+
   // Turmas
   app.get(api.turmas.listar.path, autenticar, async (req: any, res) => {
+    const usuario = await storage.getUsuario(req.session.usuarioId);
+    if (usuario?.perfil === "admin") {
+      const turmas = await storage.getTodasTurmas();
+      return res.json(turmas);
+    }
     const turmas = await storage.getTurmas(req.session.usuarioId);
     res.json(turmas);
   });

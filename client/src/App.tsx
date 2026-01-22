@@ -10,6 +10,7 @@ import { useEffect } from "react";
 import Dashboard from "@/pages/dashboard";
 import ClassDetails from "@/pages/class-details";
 import StudentsList from "@/pages/students-list";
+import UsersPage from "@/pages/usuarios";
 import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
 
@@ -35,6 +36,13 @@ function ProtectedRoute({ component: Component, ...rest }: any) {
     return null;
   }
 
+  // Admin access control for specific paths
+  const path = rest.path;
+  if (path === "/usuarios" && user.perfil !== "admin") {
+    setLocation("/");
+    return null;
+  }
+
   return <Component {...rest} />;
 }
 
@@ -45,13 +53,16 @@ function Router() {
       
       {/* Protected Routes */}
       <Route path="/">
-        {() => <ProtectedRoute component={Dashboard} />}
+        {(params) => <ProtectedRoute component={Dashboard} path="/" {...params} />}
       </Route>
       <Route path="/classes/:id">
-        {() => <ProtectedRoute component={ClassDetails} />}
+        {(params) => <ProtectedRoute component={ClassDetails} path="/classes/:id" {...params} />}
       </Route>
       <Route path="/students">
-        {() => <ProtectedRoute component={StudentsList} />}
+        {(params) => <ProtectedRoute component={StudentsList} path="/students" {...params} />}
+      </Route>
+      <Route path="/usuarios">
+        {(params) => <ProtectedRoute component={UsersPage} path="/usuarios" {...params} />}
       </Route>
       
       <Route component={NotFound} />

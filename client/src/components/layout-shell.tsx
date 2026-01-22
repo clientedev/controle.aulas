@@ -22,6 +22,10 @@ export function LayoutShell({ children }: { children: ReactNode }) {
     { href: "/students", label: "Alunos", icon: GraduationCap },
   ];
 
+  if (user?.perfil === "admin") {
+    navItems.push({ href: "/usuarios", label: "Professores", icon: Users });
+  }
+
   const SidebarContent = () => (
     <div className="flex h-full flex-col gap-4">
       <div className="flex h-16 items-center border-b px-6">
