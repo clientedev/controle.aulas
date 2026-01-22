@@ -1,45 +1,23 @@
-import { queryClient } from "@/lib/queryClient";
-import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useParams, Link } from "wouter";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { 
+  ArrowLeft, Plus, Trash2, UserPlus, FileText, AlertCircle, 
+  Users, MoreHorizontal, Upload, BookOpen, Clock, Check, X, Minus 
+} from "lucide-react";
+import { queryClient } from "@/lib/queryClient";
 import { useClass, useDeleteClass } from "@/hooks/use-classes";
 import { useStudents, useEnrollStudent, useCreateManyStudents } from "@/hooks/use-students";
-import { useCreateEvaluation } from "@/hooks/use-evaluations";
 import { useClassGrades, useUpdateGrade } from "@/hooks/use-grades";
 import { useUnidadesCurriculares, useCreateUnidadeCurricular } from "@/hooks/use-unidades-curriculares";
 import { LayoutShell } from "@/components/layout-shell";
-import {
-  ArrowLeft,
-  Plus,
-  Trash2,
-  UserPlus,
-  FileText,
-  AlertCircle,
-  Users,
-  MoreHorizontal,
-  Upload,
-  BookOpen
-} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -49,19 +27,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, 
+  AlertDialogTitle, AlertDialogTrigger 
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import * as XLSX from "xlsx";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import * as XLSX from "xlsx";
+import { api } from "@shared/routes";
 
 const createEvaluationSchema = z.object({
   unidadeCurricularId: z.string().min(1, "Selecione a unidade"),
@@ -177,6 +150,7 @@ export default function ClassDetails() {
             <EvaluationsTab 
               evaluations={classData.avaliacoes || []} 
               unidades={classData.unidadesCurriculares || []} 
+              classId={classId}
             />
           </TabsContent>
 
@@ -246,7 +220,6 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
 
         createManyMutation.mutate(formattedStudents, {
           onSuccess: async (createdStudents) => {
-            // After creating, enroll them all in the class
             for (const student of createdStudents) {
               await enrollMutation.mutateAsync(student.id);
             }
@@ -330,9 +303,6 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
                     disabled={createManyMutation.isPending}
                   />
                 </Label>
-                {createManyMutation.isPending && (
-                  <p className="text-xs text-center text-primary animate-pulse font-medium">Processando lista de alunos...</p>
-                )}
               </div>
             </div>
             <DialogFooter>
@@ -464,11 +434,9 @@ function UnidadesTab({ classId, unidades }: { classId: number, unidades: any[] }
   );
 }
 
-function EvaluationsTab({ evaluations, unidades }: { evaluations: any[], unidades: any[] }) {
+function EvaluationsTab({ evaluations, unidades, classId }: { evaluations: any[], unidades: any[], classId: number }) {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedUcId, setSelectedUcId] = useState<number | null>(null);
   
-  // Custom hook for create evaluation needs to handle selectedUcId
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       const { unidadeCurricularId, ...rest } = data;
@@ -481,7 +449,7 @@ function EvaluationsTab({ evaluations, unidades }: { evaluations: any[], unidade
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.turmas.obter.path] });
+      queryClient.invalidateQueries({ queryKey: [api.turmas.obter.path, { id: classId }] });
     }
   });
   
@@ -516,11 +484,6 @@ function EvaluationsTab({ evaluations, unidades }: { evaluations: any[], unidade
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Nova Avaliação</DialogTitle>
-              {unidades.length === 0 && (
-                <DialogDescription className="text-destructive font-medium">
-                  Crie uma unidade curricular primeiro!
-                </DialogDescription>
-              )}
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
@@ -581,9 +544,9 @@ function EvaluationsTab({ evaluations, unidades }: { evaluations: any[], unidade
                     )}
                   />
                 </div>
-                <DialogFooter>
-                  <Button type="submit" disabled={createMutation.isPending}>Criar</Button>
-                </DialogFooter>
+                <Button type="submit" className="w-full" disabled={createMutation.isPending}>
+                  {createMutation.isPending ? "Criando..." : "Criar Avaliação"}
+                </Button>
               </form>
             </Form>
           </DialogContent>
@@ -601,20 +564,20 @@ function EvaluationsTab({ evaluations, unidades }: { evaluations: any[], unidade
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead>Unidade</TableHead>
-                <TableHead>Nota Máxima</TableHead>
+                <TableHead>Nota Máx.</TableHead>
                 <TableHead>Peso</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {evaluations.map((evalItem) => {
-                const uc = unidades.find(u => u.id === evalItem.unidadeCurricularId);
+              {evaluations.map((eval_item) => {
+                const uc = unidades.find(u => u.id === eval_item.unidadeCurricularId);
                 return (
-                  <TableRow key={evalItem.id}>
-                    <TableCell className="font-medium">{evalItem.nome}</TableCell>
+                  <TableRow key={eval_item.id}>
+                    <TableCell className="font-medium">{eval_item.nome}</TableCell>
                     <TableCell>{uc?.nome || "-"}</TableCell>
-                    <TableCell>{evalItem.notaMaxima}</TableCell>
-                    <TableCell>{evalItem.peso}</TableCell>
+                    <TableCell>{eval_item.notaMaxima}</TableCell>
+                    <TableCell>{eval_item.peso}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                         <MoreHorizontal className="h-4 w-4" />
@@ -631,13 +594,8 @@ function EvaluationsTab({ evaluations, unidades }: { evaluations: any[], unidade
   );
 }
 
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { Calendar as CalendarIcon, Clock, Check, X, Minus, BookOpen } from "lucide-react";
-
 function AttendanceTab({ classId, students }: { classId: number, students: any[] }) {
-  const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   
   const { data: schedule } = useQuery<any[]>({
@@ -850,94 +808,96 @@ function AttendanceTab({ classId, students }: { classId: number, students: any[]
 }
 
 function GradesTab({ classId, students, evaluations }: { classId: number, students: any[], evaluations: any[] }) {
-  const { data: grades, isLoading } = useClassGrades(classId);
-  const updateGradeMutation = useUpdateGrade(classId);
+  const { data: grades } = useClassGrades(classId);
+  const updateGradeMutation = useUpdateGrade();
 
-  const getGrade = (studentId: number, evalId: number) => {
-    return grades?.find(g => g.alunoId === studentId && g.avaliacaoId === evalId)?.valor ?? "";
-  };
-
-  const handleGradeChange = (studentId: number, evalId: number, value: string) => {
-    if (value === "") return;
+  const handleGradeChange = (studentId: number, evaluationId: number, value: string) => {
     const numValue = parseFloat(value);
-    if (isNaN(numValue)) return;
-
-    updateGradeMutation.mutate({
-      alunoId: studentId,
-      avaliacaoId: evalId,
-      valor: numValue
-    });
+    if (!isNaN(numValue)) {
+      updateGradeMutation.mutate({
+        alunoId: studentId,
+        avaliacaoId: evaluationId,
+        valor: numValue
+      });
+    }
   };
 
-  if (isLoading) return <div className="p-8 text-center">Carregando notas...</div>;
+  const getGradeValue = (studentId: number, evaluationId: number) => {
+    const grade = grades?.find(g => g.alunoId === studentId && g.avaliacaoId === evaluationId);
+    return grade ? grade.valor.toString() : "";
+  };
+
+  const calculateStudentAverage = (studentId: number) => {
+    let weightedSum = 0;
+    let totalWeight = 0;
+
+    evaluations.forEach(e => {
+      const grade = grades?.find(g => g.alunoId === studentId && g.avaliacaoId === e.id);
+      if (grade) {
+        const normalizedScore = (grade.valor / e.notaMaxima) * 10;
+        weightedSum += normalizedScore * e.peso;
+        totalWeight += e.peso;
+      }
+    });
+
+    return totalWeight > 0 ? (weightedSum / totalWeight).toFixed(1) : "-";
+  };
 
   return (
-    <Card className="overflow-hidden">
+    <Card>
       <CardHeader>
-        <CardTitle>Planilha de Notas</CardTitle>
-        <CardDescription>Insira as notas para cada aluno e avaliação</CardDescription>
+        <CardTitle>Quadro de Notas</CardTitle>
+        <CardDescription>Notas normalizadas (0-10) baseadas no peso</CardDescription>
       </CardHeader>
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="min-w-[200px] sticky left-0 bg-card z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Aluno</TableHead>
-              {evaluations.map(e => (
-                <TableHead key={e.id} className="text-center min-w-[100px]">
-                  <div className="flex flex-col">
-                    <span>{e.nome}</span>
-                    <span className="text-xs text-muted-foreground font-normal">Máx: {e.notaMaxima}</span>
-                  </div>
-                </TableHead>
-              ))}
-              <TableHead className="text-center font-bold bg-muted/20">Média</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {students.map(student => {
-              let totalWeight = 0;
-              let weightedSum = 0;
-              
-              evaluations.forEach(e => {
-                const grade = grades?.find(g => g.alunoId === student.id && g.avaliacaoId === e.id);
-                if (grade) {
-                  const normalizedScore = (grade.valor / e.notaMaxima) * 10;
-                  weightedSum += normalizedScore * e.peso;
-                  totalWeight += e.peso;
-                }
-              });
-
-              const finalAverage = totalWeight > 0 ? (weightedSum / totalWeight).toFixed(1) : "-";
-
-              return (
-                <TableRow key={student.id}>
-                  <TableCell className="sticky left-0 bg-card z-10 font-medium shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                    <div className="flex flex-col">
-                      <span>{student.nome}</span>
-                      <span className="text-xs text-muted-foreground font-mono">{student.matricula}</span>
-                    </div>
-                  </TableCell>
+      <CardContent>
+        {evaluations.length === 0 ? (
+          <div className="flex h-40 flex-col items-center justify-center text-center text-muted-foreground border-2 border-dashed rounded-xl">
+            <FileText className="h-8 w-8 mb-2 opacity-50" />
+            <p>Nenhuma avaliação para exibir notas</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[200px]">Aluno</TableHead>
                   {evaluations.map(e => (
-                    <TableCell key={e.id} className="p-2 text-center">
-                      <Input 
-                        className="w-16 h-9 mx-auto text-center tabular-nums" 
-                        defaultValue={getGrade(student.id, e.id)}
-                        onBlur={(ev) => handleGradeChange(student.id, e.id, ev.target.value)}
-                        placeholder="-"
-                      />
-                    </TableCell>
+                    <TableHead key={e.id} className="text-center min-w-[100px]">
+                      {e.nome}
+                      <div className="text-[10px] text-muted-foreground">Max: {e.notaMaxima} | Peso: {e.peso}</div>
+                    </TableHead>
                   ))}
-                  <TableCell className="text-center font-bold bg-muted/20">
-                    <span className={Number(finalAverage) >= 6 ? "text-green-600" : "text-destructive"}>
-                      {finalAverage}
-                    </span>
-                  </TableCell>
+                  <TableHead className="text-center font-bold">Média Final</TableHead>
                 </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
+              </TableHeader>
+              <TableBody>
+                {students.map(student => {
+                  const finalAverage = calculateStudentAverage(student.id);
+                  return (
+                    <TableRow key={student.id}>
+                      <TableCell className="font-medium">{student.nome}</TableCell>
+                      {evaluations.map(e => (
+                        <TableCell key={e.id} className="p-1">
+                          <Input
+                            type="number"
+                            step="0.1"
+                            className="h-8 text-center"
+                            defaultValue={getGradeValue(student.id, e.id)}
+                            onBlur={(evt) => handleGradeChange(student.id, e.id, evt.target.value)}
+                          />
+                        </TableCell>
+                      ))}
+                      <TableCell className={`text-center font-bold ${finalAverage !== "-" && Number(finalAverage) >= 6 ? "text-green-600" : "text-destructive"}`}>
+                        {finalAverage}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
     </Card>
   );
 }
@@ -946,8 +906,14 @@ function DetailsSkeleton() {
   return (
     <LayoutShell>
       <div className="space-y-6">
-        <Skeleton className="h-20 w-full" />
-        <Skeleton className="h-96 w-full" />
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-10 w-10 rounded-full" />
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+        </div>
+        <Skeleton className="h-[400px] w-full rounded-xl" />
       </div>
     </LayoutShell>
   );
@@ -957,11 +923,11 @@ function NotFoundState() {
   return (
     <LayoutShell>
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <AlertCircle className="h-16 w-16 text-destructive mb-4" />
-        <h2 className="text-2xl font-bold">Turma Não Encontrada</h2>
-        <p className="text-muted-foreground mt-2 mb-6">A turma que você está procurando não existe ou foi excluída.</p>
+        <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+        <h2 className="text-2xl font-bold">Turma não encontrada</h2>
+        <p className="text-muted-foreground mt-2">A turma que você está procurando não existe ou foi removida.</p>
         <Link href="/">
-          <Button>Voltar ao Painel</Button>
+          <Button className="mt-6">Voltar para o Início</Button>
         </Link>
       </div>
     </LayoutShell>

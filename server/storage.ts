@@ -1,7 +1,7 @@
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 import {
-  usuarios, turmas, alunos, matriculas, avaliacoes, notas, horarios, frequencia,
+  usuarios, turmas, alunos, matriculas, avaliacoes, notas, horarios, frequencia, unidadesCurriculares,
   type Usuario, type InsertUsuario, type Turma, type InsertTurma,
   type Aluno, type InsertAluno, type Avaliacao, type InsertAvaliacao,
   type Nota, type InsertNota, type TurmaComDetalhes, type UnidadeCurricular, type InsertUnidadeCurricular,

@@ -5,11 +5,17 @@ import {
   insertAlunoSchema, 
   insertAvaliacaoSchema, 
   insertNotaSchema, 
+  insertUnidadeCurricularSchema,
+  insertHorarioSchema,
+  insertFrequenciaSchema,
   usuarios, 
   turmas, 
   alunos, 
   avaliacoes, 
-  notas 
+  notas,
+  horarios,
+  frequencia,
+  type UnidadeCurricular
 } from './schema';
 
 export const esquemasErro = {
@@ -158,7 +164,7 @@ export const api = {
       path: '/api/turmas/:id/matricular',
       input: z.object({ alunoId: z.number() }),
       responses: {
-        200: z.object({ mensagem: z.string() }),
+        201: z.object({ mensagem: z.string() }),
         404: esquemasErro.naoEncontrado,
       },
     },
