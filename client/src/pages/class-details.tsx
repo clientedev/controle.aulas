@@ -7,14 +7,13 @@ import { useClassGrades, useUpdateGrade } from "@/hooks/use-grades";
 import { LayoutShell } from "@/components/layout-shell";
 import {
   ArrowLeft,
-  Settings,
-  MoreHorizontal,
   Plus,
   Trash2,
   UserPlus,
-  Search,
   FileText,
-  AlertCircle
+  AlertCircle,
+  Users,
+  MoreHorizontal
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -37,12 +36,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -50,7 +43,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { format } from "date-fns";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -63,11 +55,10 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-// Schemas
 const createEvaluationSchema = z.object({
-  name: z.string().min(2, "Name required"),
-  maxScore: z.string().transform(val => parseFloat(val) || 10),
-  weight: z.string().transform(val => parseFloat(val) || 1),
+  nome: z.string().min(2, "Nome obrigatório"),
+  notaMaxima: z.string().transform(val => parseFloat(val) || 10),
+  peso: z.string().transform(val => parseFloat(val) || 1),
 });
 
 export default function ClassDetails() {
@@ -83,7 +74,6 @@ export default function ClassDetails() {
   return (
     <LayoutShell>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
             <Link href="/">
@@ -93,12 +83,12 @@ export default function ClassDetails() {
             </Link>
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="font-display text-2xl font-bold md:text-3xl">{classData.name}</h1>
+                <h1 className="font-display text-2xl font-bold md:text-3xl">{classData.nome}</h1>
                 <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
-                  {classData.year} • S{classData.semester}
+                  {classData.ano} • {classData.semestre}º Sem.
                 </Badge>
               </div>
-              <p className="text-muted-foreground font-medium">{classData.unit}</p>
+              <p className="text-muted-foreground font-medium">{classData.unidadeCurricular}</p>
             </div>
           </div>
 
@@ -107,24 +97,24 @@ export default function ClassDetails() {
               <AlertDialogTrigger asChild>
                 <Button variant="outline" className="text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/20">
                   <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Class
+                  Excluir Turma
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogTitle>Você tem certeza absoluta?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the class,
-                    all enrollments, evaluations, and grades.
+                    Esta ação não pode ser desfeita. Isso excluirá permanentemente a turma,
+                    todas as matrículas, avaliações e notas.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
                   <AlertDialogAction 
                     onClick={() => deleteClassMutation.mutate(classId)}
                     className="bg-destructive hover:bg-destructive/90"
                   >
-                    Delete
+                    Excluir
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -132,42 +122,41 @@ export default function ClassDetails() {
           </div>
         </div>
 
-        {/* Content Tabs */}
         <Tabs defaultValue="students" className="w-full space-y-6">
           <TabsList className="w-full justify-start border-b bg-transparent p-0">
             <TabsTrigger 
               value="students" 
               className="rounded-none border-b-2 border-transparent px-4 py-3 font-medium data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary"
             >
-              Students
+              Alunos
             </TabsTrigger>
             <TabsTrigger 
               value="evaluations" 
               className="rounded-none border-b-2 border-transparent px-4 py-3 font-medium data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary"
             >
-              Evaluations
+              Avaliações
             </TabsTrigger>
             <TabsTrigger 
               value="grades" 
               className="rounded-none border-b-2 border-transparent px-4 py-3 font-medium data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary"
             >
-              Gradebook
+              Notas
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="students" className="animate-in fade-in-50 slide-in-from-bottom-2 duration-300">
-            <StudentsTab classId={classId} enrolledStudents={classData.students || []} />
+            <StudentsTab enrolledStudents={classData.alunos || []} classId={classId} />
           </TabsContent>
 
           <TabsContent value="evaluations" className="animate-in fade-in-50 slide-in-from-bottom-2 duration-300">
-            <EvaluationsTab classId={classId} evaluations={classData.evaluations || []} />
+            <EvaluationsTab evaluations={classData.avaliacoes || []} classId={classId} />
           </TabsContent>
 
           <TabsContent value="grades" className="animate-in fade-in-50 slide-in-from-bottom-2 duration-300">
             <GradesTab 
               classId={classId} 
-              students={classData.students || []} 
-              evaluations={classData.evaluations || []} 
+              students={classData.alunos || []} 
+              evaluations={classData.avaliacoes || []} 
             />
           </TabsContent>
         </Tabs>
@@ -182,7 +171,6 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
   const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState<string>("");
 
-  // Filter out already enrolled students
   const availableStudents = allStudents?.filter(
     s => !enrolledStudents.find(es => es.id === s.id)
   ) || [];
@@ -202,40 +190,40 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div className="space-y-1">
-          <CardTitle>Enrolled Students</CardTitle>
-          <CardDescription>Manage students in this class</CardDescription>
+          <CardTitle>Alunos Matriculados</CardTitle>
+          <CardDescription>Gerencie os alunos desta turma</CardDescription>
         </div>
         <Dialog open={enrollDialogOpen} onOpenChange={setEnrollDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <UserPlus className="mr-2 h-4 w-4" />
-              Enroll Student
+              Matricular Aluno
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Enroll Student</DialogTitle>
-              <DialogDescription>Add an existing student to this class</DialogDescription>
+              <DialogTitle>Matricular Aluno</DialogTitle>
+              <DialogDescription>Adicione um aluno existente a esta turma</DialogDescription>
             </DialogHeader>
             <div className="py-4">
-              <Label htmlFor="student-select">Select Student</Label>
+              <Label htmlFor="student-select">Selecionar Aluno</Label>
               <select
                 id="student-select"
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 mt-2"
                 value={selectedStudentId}
                 onChange={(e) => setSelectedStudentId(e.target.value)}
               >
-                <option value="">Select a student...</option>
+                <option value="">Selecione um aluno...</option>
                 {availableStudents.map(student => (
                   <option key={student.id} value={student.id}>
-                    {student.name} ({student.registrationNumber})
+                    {student.nome} ({student.matricula})
                   </option>
                 ))}
               </select>
             </div>
             <DialogFooter>
               <Button onClick={handleEnroll} disabled={!selectedStudentId || enrollMutation.isPending}>
-                {enrollMutation.isPending ? "Enrolling..." : "Enroll"}
+                {enrollMutation.isPending ? "Matriculando..." : "Matricular"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -245,22 +233,22 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
         {enrolledStudents.length === 0 ? (
           <div className="flex h-40 flex-col items-center justify-center text-center text-muted-foreground border-2 border-dashed rounded-xl">
             <Users className="h-8 w-8 mb-2 opacity-50" />
-            <p>No students enrolled yet</p>
+            <p>Nenhum aluno matriculado ainda</p>
           </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Registration</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>Matrícula</TableHead>
+                <TableHead>Nome</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {enrolledStudents.map((student) => (
                 <TableRow key={student.id}>
-                  <TableCell className="font-mono text-xs">{student.registrationNumber}</TableCell>
-                  <TableCell className="font-medium">{student.name}</TableCell>
+                  <TableCell className="font-mono text-xs">{student.matricula}</TableCell>
+                  <TableCell className="font-medium">{student.nome}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                       <MoreHorizontal className="h-4 w-4" />
@@ -282,7 +270,7 @@ function EvaluationsTab({ classId, evaluations }: { classId: number, evaluations
   
   const form = useForm({
     resolver: zodResolver(createEvaluationSchema),
-    defaultValues: { name: "", maxScore: "10", weight: "1" }
+    defaultValues: { nome: "", notaMaxima: "10", peso: "1" }
   });
 
   const onSubmit = (data: any) => {
@@ -298,29 +286,29 @@ function EvaluationsTab({ classId, evaluations }: { classId: number, evaluations
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div className="space-y-1">
-          <CardTitle>Evaluations</CardTitle>
-          <CardDescription>Tests, assignments, and projects</CardDescription>
+          <CardTitle>Avaliações</CardTitle>
+          <CardDescription>Provas, trabalhos e projetos</CardDescription>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
-              Add Evaluation
+              Adicionar Avaliação
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>New Evaluation</DialogTitle>
+              <DialogTitle>Nova Avaliação</DialogTitle>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
                 <FormField
                   control={form.control}
-                  name="name"
+                  name="nome"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Name</FormLabel>
-                      <FormControl><Input placeholder="Exam 1" {...field} /></FormControl>
+                      <FormLabel>Nome</FormLabel>
+                      <FormControl><Input placeholder="Prova 1" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -328,10 +316,10 @@ function EvaluationsTab({ classId, evaluations }: { classId: number, evaluations
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="maxScore"
+                    name="notaMaxima"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Max Score</FormLabel>
+                        <FormLabel>Nota Máxima</FormLabel>
                         <FormControl><Input type="number" step="0.1" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
@@ -339,10 +327,10 @@ function EvaluationsTab({ classId, evaluations }: { classId: number, evaluations
                   />
                   <FormField
                     control={form.control}
-                    name="weight"
+                    name="peso"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Weight</FormLabel>
+                        <FormLabel>Peso</FormLabel>
                         <FormControl><Input type="number" step="0.1" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
@@ -350,7 +338,7 @@ function EvaluationsTab({ classId, evaluations }: { classId: number, evaluations
                   />
                 </div>
                 <DialogFooter>
-                  <Button type="submit" disabled={createMutation.isPending}>Create</Button>
+                  <Button type="submit" disabled={createMutation.isPending}>Criar</Button>
                 </DialogFooter>
               </form>
             </Form>
@@ -361,24 +349,24 @@ function EvaluationsTab({ classId, evaluations }: { classId: number, evaluations
         {evaluations.length === 0 ? (
           <div className="flex h-40 flex-col items-center justify-center text-center text-muted-foreground border-2 border-dashed rounded-xl">
             <FileText className="h-8 w-8 mb-2 opacity-50" />
-            <p>No evaluations created yet</p>
+            <p>Nenhuma avaliação criada ainda</p>
           </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Max Score</TableHead>
-                <TableHead>Weight</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>Nome</TableHead>
+                <TableHead>Nota Máxima</TableHead>
+                <TableHead>Peso</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {evaluations.map((evalItem) => (
                 <TableRow key={evalItem.id}>
-                  <TableCell className="font-medium">{evalItem.name}</TableCell>
-                  <TableCell>{evalItem.maxScore}</TableCell>
-                  <TableCell>{evalItem.weight}</TableCell>
+                  <TableCell className="font-medium">{evalItem.nome}</TableCell>
+                  <TableCell>{evalItem.notaMaxima}</TableCell>
+                  <TableCell>{evalItem.peso}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                       <MoreHorizontal className="h-4 w-4" />
@@ -398,9 +386,8 @@ function GradesTab({ classId, students, evaluations }: { classId: number, studen
   const { data: grades, isLoading } = useClassGrades(classId);
   const updateGradeMutation = useUpdateGrade(classId);
 
-  // Helper to find existing grade
   const getGrade = (studentId: number, evalId: number) => {
-    return grades?.find(g => g.studentId === studentId && g.evaluationId === evalId)?.score ?? "";
+    return grades?.find(g => g.alunoId === studentId && g.avaliacaoId === evalId)?.valor ?? "";
   };
 
   const handleGradeChange = (studentId: number, evalId: number, value: string) => {
@@ -409,49 +396,47 @@ function GradesTab({ classId, students, evaluations }: { classId: number, studen
     if (isNaN(numValue)) return;
 
     updateGradeMutation.mutate({
-      studentId,
-      evaluationId: evalId,
-      score: numValue
+      alunoId: studentId,
+      avaliacaoId: evalId,
+      valor: numValue
     });
   };
 
-  if (isLoading) return <div className="p-8 text-center">Loading grades...</div>;
+  if (isLoading) return <div className="p-8 text-center">Carregando notas...</div>;
 
   return (
     <Card className="overflow-hidden">
       <CardHeader>
-        <CardTitle>Gradebook</CardTitle>
-        <CardDescription>Enter grades for each student and evaluation</CardDescription>
+        <CardTitle>Planilha de Notas</CardTitle>
+        <CardDescription>Insira as notas para cada aluno e avaliação</CardDescription>
       </CardHeader>
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="min-w-[200px] sticky left-0 bg-card z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Student</TableHead>
+              <TableHead className="min-w-[200px] sticky left-0 bg-card z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Aluno</TableHead>
               {evaluations.map(e => (
                 <TableHead key={e.id} className="text-center min-w-[100px]">
                   <div className="flex flex-col">
-                    <span>{e.name}</span>
-                    <span className="text-xs text-muted-foreground font-normal">Max: {e.maxScore}</span>
+                    <span>{e.nome}</span>
+                    <span className="text-xs text-muted-foreground font-normal">Máx: {e.notaMaxima}</span>
                   </div>
                 </TableHead>
               ))}
-              <TableHead className="text-center font-bold bg-muted/20">Average</TableHead>
+              <TableHead className="text-center font-bold bg-muted/20">Média</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {students.map(student => {
-              // Calculate weighted average
               let totalWeight = 0;
               let weightedSum = 0;
               
               evaluations.forEach(e => {
-                const grade = grades?.find(g => g.studentId === student.id && g.evaluationId === e.id);
+                const grade = grades?.find(g => g.alunoId === student.id && g.avaliacaoId === e.id);
                 if (grade) {
-                  // Normalize to 0-10 scale if maxScore differs
-                  const normalizedScore = (grade.score / e.maxScore) * 10;
-                  weightedSum += normalizedScore * e.weight;
-                  totalWeight += e.weight;
+                  const normalizedScore = (grade.valor / e.notaMaxima) * 10;
+                  weightedSum += normalizedScore * e.peso;
+                  totalWeight += e.peso;
                 }
               });
 
@@ -461,8 +446,8 @@ function GradesTab({ classId, students, evaluations }: { classId: number, studen
                 <TableRow key={student.id}>
                   <TableCell className="sticky left-0 bg-card z-10 font-medium shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                     <div className="flex flex-col">
-                      <span>{student.name}</span>
-                      <span className="text-xs text-muted-foreground font-mono">{student.registrationNumber}</span>
+                      <span>{student.nome}</span>
+                      <span className="text-xs text-muted-foreground font-mono">{student.matricula}</span>
                     </div>
                   </TableCell>
                   {evaluations.map(e => (
@@ -506,10 +491,10 @@ function NotFoundState() {
     <LayoutShell>
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <AlertCircle className="h-16 w-16 text-destructive mb-4" />
-        <h2 className="text-2xl font-bold">Class Not Found</h2>
-        <p className="text-muted-foreground mt-2 mb-6">The class you are looking for does not exist or has been deleted.</p>
+        <h2 className="text-2xl font-bold">Turma Não Encontrada</h2>
+        <p className="text-muted-foreground mt-2 mb-6">A turma que você está procurando não existe ou foi excluída.</p>
         <Link href="/">
-          <Button>Return to Dashboard</Button>
+          <Button>Voltar ao Painel</Button>
         </Link>
       </div>
     </LayoutShell>

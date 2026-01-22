@@ -7,7 +7,6 @@ import {
   Calendar, 
   BookOpen, 
   ArrowRight,
-  MoreVertical,
   GraduationCap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,7 +20,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -36,12 +34,11 @@ import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Define schema for client-side form validation (mirroring shared schema)
 const createClassSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  unit: z.string().min(2, "Unit name must be at least 2 characters"),
-  year: z.string().transform(val => parseInt(val, 10)),
-  semester: z.string().transform(val => parseInt(val, 10)),
+  nome: z.string().min(2, "O nome deve ter pelo menos 2 caracteres"),
+  unidadeCurricular: z.string().min(2, "A unidade deve ter pelo menos 2 caracteres"),
+  ano: z.string().transform(val => parseInt(val, 10)),
+  semestre: z.string().transform(val => parseInt(val, 10)),
 });
 
 type CreateClassForm = z.input<typeof createClassSchema>;
@@ -54,19 +51,18 @@ export default function Dashboard() {
   const form = useForm<CreateClassForm>({
     resolver: zodResolver(createClassSchema),
     defaultValues: {
-      name: "",
-      unit: "",
-      year: new Date().getFullYear().toString(),
-      semester: "1",
+      nome: "",
+      unidadeCurricular: "",
+      ano: new Date().getFullYear().toString(),
+      semestre: "1",
     },
   });
 
   const onSubmit = (data: CreateClassForm) => {
-    // Transform string inputs to numbers as expected by the hook
     createClassMutation.mutate({
       ...data,
-      year: Number(data.year),
-      semester: Number(data.semester),
+      ano: Number(data.ano),
+      semestre: Number(data.semestre),
     }, {
       onSuccess: () => {
         setIsDialogOpen(false);
@@ -82,22 +78,22 @@ export default function Dashboard() {
       <div className="flex flex-col gap-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-            <p className="text-muted-foreground mt-1">Manage your classes and track student progress.</p>
+            <h1 className="text-3xl font-bold tracking-tight">Painel de Controle</h1>
+            <p className="text-muted-foreground mt-1">Gerencie suas turmas e acompanhe o progresso dos alunos.</p>
           </div>
           
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button className="shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all">
                 <Plus className="mr-2 h-4 w-4" />
-                New Class
+                Nova Turma
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
-                <DialogTitle>Create New Class</DialogTitle>
+                <DialogTitle>Criar Nova Turma</DialogTitle>
                 <DialogDescription>
-                  Add a new class for the current academic year.
+                  Adicione uma nova turma para o ano letivo atual.
                 </DialogDescription>
               </DialogHeader>
               
@@ -105,12 +101,12 @@ export default function Dashboard() {
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
                   <FormField
                     control={form.control}
-                    name="name"
+                    name="nome"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Class Name</FormLabel>
+                        <FormLabel>Nome da Turma</FormLabel>
                         <FormControl>
-                          <Input placeholder="e.g. Turma A - 2024" {...field} />
+                          <Input placeholder="ex: Turma A - 2024" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -119,12 +115,12 @@ export default function Dashboard() {
                   
                   <FormField
                     control={form.control}
-                    name="unit"
+                    name="unidadeCurricular"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Curricular Unit</FormLabel>
+                        <FormLabel>Unidade Curricular</FormLabel>
                         <FormControl>
-                          <Input placeholder="e.g. Lógica de Programação" {...field} />
+                          <Input placeholder="ex: Lógica de Programação" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -134,10 +130,10 @@ export default function Dashboard() {
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
-                      name="year"
+                      name="ano"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Year</FormLabel>
+                          <FormLabel>Ano</FormLabel>
                           <FormControl>
                             <Input type="number" {...field} />
                           </FormControl>
@@ -148,22 +144,22 @@ export default function Dashboard() {
                     
                     <FormField
                       control={form.control}
-                      name="semester"
+                      name="semestre"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Semester</FormLabel>
+                          <FormLabel>Semestre</FormLabel>
                           <Select 
                             onValueChange={field.onChange} 
                             defaultValue={field.value}
                           >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select" />
+                                <SelectValue placeholder="Selecione" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="1">1st Semester</SelectItem>
-                              <SelectItem value="2">2nd Semester</SelectItem>
+                              <SelectItem value="1">1º Semestre</SelectItem>
+                              <SelectItem value="2">2º Semestre</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -173,9 +169,9 @@ export default function Dashboard() {
                   </div>
                   
                   <DialogFooter className="pt-4">
-                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
                     <Button type="submit" disabled={createClassMutation.isPending}>
-                      {createClassMutation.isPending ? "Creating..." : "Create Class"}
+                      {createClassMutation.isPending ? "Criando..." : "Criar Turma"}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -201,7 +197,6 @@ export default function Dashboard() {
 function ClassCard({ cls }: { cls: any }) {
   return (
     <Link href={`/classes/${cls.id}`} className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border bg-card p-6 shadow-sm transition-all duration-300 hover:shadow-xl hover:border-primary/50 hover:-translate-y-1">
-      {/* Decorative gradient background opacity */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       
       <div className="relative z-10 space-y-4">
@@ -211,26 +206,25 @@ function ClassCard({ cls }: { cls: any }) {
           </div>
           <div className="flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground border border-border">
             <Calendar className="h-3 w-3" />
-            {cls.year} • S{cls.semester}
+            {cls.ano} • {cls.semestre}º Sem.
           </div>
         </div>
         
         <div>
           <h3 className="font-display text-lg font-bold leading-tight group-hover:text-primary transition-colors">
-            {cls.name}
+            {cls.nome}
           </h3>
           <p className="mt-1.5 text-sm text-muted-foreground line-clamp-1 font-medium">
-            {cls.unit}
+            {cls.unidadeCurricular}
           </p>
         </div>
       </div>
       
       <div className="relative z-10 mt-6 flex items-center justify-between border-t pt-4">
         <div className="flex -space-x-2">
-          {/* Mock avatars for visual interest */}
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-7 w-7 rounded-full border-2 border-background bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground">
-              S{i}
+              A{i}
             </div>
           ))}
           <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-background bg-muted text-[10px] font-medium text-muted-foreground">
@@ -239,7 +233,7 @@ function ClassCard({ cls }: { cls: any }) {
         </div>
         
         <span className="flex items-center gap-1 text-sm font-medium text-primary opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0">
-          View Details <ArrowRight className="h-3.5 w-3.5" />
+          Ver Detalhes <ArrowRight className="h-3.5 w-3.5" />
         </span>
       </div>
     </Link>
@@ -273,9 +267,9 @@ function EmptyState() {
       <div className="bg-background p-4 rounded-full shadow-sm mb-4">
         <BookOpen className="h-8 w-8 text-muted-foreground" />
       </div>
-      <h3 className="text-lg font-semibold">No classes found</h3>
+      <h3 className="text-lg font-semibold">Nenhuma turma encontrada</h3>
       <p className="text-muted-foreground max-w-sm mt-2 mb-6">
-        Get started by creating your first class to manage students and evaluations.
+        Comece criando sua primeira turma para gerenciar alunos e avaliações.
       </p>
     </div>
   );

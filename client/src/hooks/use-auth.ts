@@ -1,39 +1,48 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { User } from "@shared/models/auth";
+import type { Usuario } from "@shared/schema";
+import { api } from "@shared/routes";
 
-async function fetchUser(): Promise<User | null> {
-  const response = await fetch("/api/auth/user", {
-    credentials: "include",
-  });
-
-  if (response.status === 401) {
-    return null;
-  }
-
-  if (!response.ok) {
-    throw new Error(`${response.status}: ${response.statusText}`);
-  }
-
+async function fetchMe(): Promise<Usuario | null> {
+  const response = await fetch(api.auth.me.path);
+  if (response.status === 401) return null;
+  if (!response.ok) throw new Error("Falha ao buscar usuário");
   return response.json();
-}
-
-async function logout(): Promise<void> {
-  window.location.href = "/api/logout";
 }
 
 export function useAuth() {
   const queryClient = useQueryClient();
-  const { data: user, isLoading } = useQuery<User | null>({
-    queryKey: ["/api/auth/user"],
-    queryFn: fetchUser,
+  
+  const { data: user, isLoading } = useQuery<Usuario | null>({
+    queryKey: [api.auth.me.path],
+    queryFn: fetchMe,
     retry: false,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  const loginMutation = useMutation({
+    mutationFn: async (credentials: { email: string; senha: string }) => {
+      const res = await fetch(api.auth.login.path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(credentials),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.mensagem || "Falha no login");
+      }
+      return res.json();
+    },
+    onSuccess: (newUser) => {
+      queryClient.setQueryData([api.auth.me.path], newUser);
+    },
   });
 
   const logoutMutation = useMutation({
-    mutationFn: logout,
+    mutationFn: async () => {
+      await fetch(api.auth.logout.path, { method: "POST" });
+    },
     onSuccess: () => {
-      queryClient.setQueryData(["/api/auth/user"], null);
+      queryClient.setQueryData([api.auth.me.path], null);
+      window.location.href = "/login";
     },
   });
 
@@ -41,7 +50,7 @@ export function useAuth() {
     user,
     isLoading,
     isAuthenticated: !!user,
-    logout: logoutMutation.mutate,
-    isLoggingOut: logoutMutation.isPending,
+    login: loginMutation,
+    logout: logoutMutation,
   };
 }

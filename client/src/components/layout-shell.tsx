@@ -18,8 +18,8 @@ export function LayoutShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
 
   const navItems = [
-    { href: "/", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/students", label: "Students", icon: GraduationCap },
+    { href: "/", label: "Início", icon: LayoutDashboard },
+    { href: "/students", label: "Alunos", icon: GraduationCap },
   ];
 
   const SidebarContent = () => (
@@ -27,7 +27,7 @@ export function LayoutShell({ children }: { children: ReactNode }) {
       <div className="flex h-16 items-center border-b px-6">
         <Link href="/" className="flex items-center gap-2 font-display font-bold text-xl text-primary">
           <School className="h-6 w-6" />
-          <span>EduSync</span>
+          <span>SENAI Gestão</span>
         </Link>
       </div>
       
@@ -58,22 +58,22 @@ export function LayoutShell({ children }: { children: ReactNode }) {
           <Avatar className="h-9 w-9 border border-border">
             <AvatarImage src={user?.profileImageUrl} />
             <AvatarFallback className="bg-primary/10 text-primary font-bold">
-              {user?.firstName?.[0]}{user?.lastName?.[0]}
+              {user?.nome?.[0]}
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col overflow-hidden">
-            <span className="truncate text-sm font-semibold">{user?.firstName} {user?.lastName}</span>
-            <span className="truncate text-xs text-muted-foreground">Teacher</span>
+            <span className="truncate text-sm font-semibold">{user?.nome}</span>
+            <span className="truncate text-xs text-muted-foreground">Professor</span>
           </div>
         </div>
         <Button 
           variant="outline" 
           className="w-full justify-start gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 hover:border-destructive/20" 
-          onClick={() => logout()}
-          disabled={isLoggingOut}
+          onClick={() => logout.mutate()}
+          disabled={logout.isPending}
         >
           <LogOut className="h-4 w-4" />
-          Sign Out
+          Sair
         </Button>
       </div>
     </div>
