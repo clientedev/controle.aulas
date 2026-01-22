@@ -103,6 +103,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async criarAluno(data: InsertAluno): Promise<Aluno> {
+    const [existe] = await db.select().from(alunos).where(eq(alunos.matricula, data.matricula));
+    if (existe) return existe;
     const [a] = await db.insert(alunos).values(data).returning();
     return a;
   }

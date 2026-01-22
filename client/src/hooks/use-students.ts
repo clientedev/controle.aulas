@@ -27,7 +27,7 @@ export function useCreateStudent() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (data: z.infer<typeof api.alunos.criar.input>) => {
+    mutationFn: async (data: any) => {
       const res = await fetch(api.alunos.criar.path, {
         method: api.alunos.criar.method,
         headers: { "Content-Type": "application/json" },
@@ -41,6 +41,34 @@ export function useCreateStudent() {
     },
     onError: (error: Error) => {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
+    },
+  });
+}
+
+export function useCreateManyStudents() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (students: any[]) => {
+      const results = [];
+      for (const student of students) {
+        const res = await fetch(api.alunos.criar.path, {
+          method: api.alunos.criar.method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(student),
+        });
+        if (res.ok) {
+          results.push(await res.json());
+        }
+      }
+      return results;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.alunos.listar.path] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Erro", description: "Erro ao importar alguns alunos", variant: "destructive" });
     },
   });
 }

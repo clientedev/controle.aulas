@@ -27,6 +27,7 @@ export const alunos = pgTable("alunos", {
   id: serial("id").primaryKey(),
   nome: text("nome").notNull(),
   matricula: text("matricula").unique().notNull(),
+  email: text("email"),
 });
 
 export const matriculas = pgTable("matriculas", {

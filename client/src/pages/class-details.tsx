@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, Link } from "wouter";
 import { useClass, useDeleteClass } from "@/hooks/use-classes";
-import { useStudents, useEnrollStudent } from "@/hooks/use-students";
+import { useStudents, useEnrollStudent, useCreateManyStudents } from "@/hooks/use-students";
 import { useCreateEvaluation } from "@/hooks/use-evaluations";
 import { useClassGrades, useUpdateGrade } from "@/hooks/use-grades";
 import { LayoutShell } from "@/components/layout-shell";
@@ -13,7 +13,8 @@ import {
   FileText,
   AlertCircle,
   Users,
-  MoreHorizontal
+  MoreHorizontal,
+  Upload
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -54,6 +55,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+import * as XLSX from "xlsx";
 
 const createEvaluationSchema = z.object({
   nome: z.string().min(2, "Nome obrigatório"),
@@ -168,8 +171,10 @@ export default function ClassDetails() {
 function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledStudents: any[] }) {
   const { data: allStudents } = useStudents();
   const enrollMutation = useEnrollStudent(classId);
+  const createManyMutation = useCreateManyStudents();
   const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState<string>("");
+  const { toast } = useToast();
 
   const availableStudents = allStudents?.filter(
     s => !enrolledStudents.find(es => es.id === s.id)
@@ -184,6 +189,47 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
         }
       });
     }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: "binary" });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws) as any[];
+
+        const formattedStudents = data.map((row: any) => ({
+          nome: row.Nome || row.nome,
+          matricula: String(row.Matricula || row.matricula || row.RA || row.ra),
+          email: row.Email || row.email || null,
+        })).filter(s => s.nome && s.matricula);
+
+        if (formattedStudents.length === 0) {
+          toast({ title: "Erro", description: "Nenhum aluno válido encontrado no arquivo. Certifique-se de que as colunas 'Nome' e 'Matricula' existem.", variant: "destructive" });
+          return;
+        }
+
+        createManyMutation.mutate(formattedStudents, {
+          onSuccess: async (createdStudents) => {
+            // After creating, enroll them all in the class
+            for (const student of createdStudents) {
+              await enrollMutation.mutateAsync(student.id);
+            }
+            toast({ title: "Sucesso", description: `${formattedStudents.length} alunos importados e matriculados` });
+            setEnrollDialogOpen(false);
+          }
+        });
+      } catch (err) {
+        toast({ title: "Erro", description: "Falha ao processar arquivo Excel", variant: "destructive" });
+      }
+    };
+    reader.readAsBinaryString(file);
   };
 
   return (
@@ -203,28 +249,65 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Matricular Aluno</DialogTitle>
-              <DialogDescription>Adicione um aluno existente a esta turma</DialogDescription>
+              <DialogDescription>Selecione um aluno ou suba uma lista Excel (Colunas: Nome, Matricula, Email)</DialogDescription>
             </DialogHeader>
-            <div className="py-4">
-              <Label htmlFor="student-select">Selecionar Aluno</Label>
-              <select
-                id="student-select"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 mt-2"
-                value={selectedStudentId}
-                onChange={(e) => setSelectedStudentId(e.target.value)}
-              >
-                <option value="">Selecione um aluno...</option>
-                {availableStudents.map(student => (
-                  <option key={student.id} value={student.id}>
-                    {student.nome} ({student.matricula})
-                  </option>
-                ))}
-              </select>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="student-select">Selecionar Aluno Existente</Label>
+                <select
+                  id="student-select"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background mt-2"
+                  value={selectedStudentId}
+                  onChange={(e) => setSelectedStudentId(e.target.value)}
+                >
+                  <option value="">Selecione um aluno...</option>
+                  {availableStudents.map(student => (
+                    <option key={student.id} value={student.id}>
+                      {student.nome} ({student.matricula})
+                    </option>
+                  ))}
+                </select>
+                <Button 
+                  className="w-full mt-2" 
+                  onClick={handleEnroll} 
+                  disabled={!selectedStudentId || enrollMutation.isPending}
+                >
+                  {enrollMutation.isPending ? "Matriculando..." : "Matricular Selecionado"}
+                </Button>
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">Ou importar lista</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="excel-upload" className="cursor-pointer">
+                  <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 hover:bg-muted/50 transition-colors">
+                    <Upload className="h-8 w-8 mb-2 text-muted-foreground" />
+                    <span className="text-sm font-medium">Clique para subir arquivo Excel</span>
+                    <span className="text-xs text-muted-foreground mt-1">Colunas: Nome, Matricula, Email (opcional)</span>
+                  </div>
+                  <Input 
+                    id="excel-upload" 
+                    type="file" 
+                    accept=".xlsx, .xls" 
+                    className="hidden" 
+                    onChange={handleFileUpload}
+                    disabled={createManyMutation.isPending}
+                  />
+                </Label>
+                {createManyMutation.isPending && (
+                  <p className="text-xs text-center text-primary animate-pulse font-medium">Processando lista de alunos...</p>
+                )}
+              </div>
             </div>
             <DialogFooter>
-              <Button onClick={handleEnroll} disabled={!selectedStudentId || enrollMutation.isPending}>
-                {enrollMutation.isPending ? "Matriculando..." : "Matricular"}
-              </Button>
+              <Button variant="ghost" onClick={() => setEnrollDialogOpen(false)}>Fechar</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -241,6 +324,7 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
               <TableRow>
                 <TableHead>Matrícula</TableHead>
                 <TableHead>Nome</TableHead>
+                <TableHead>E-mail</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -249,6 +333,7 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
                 <TableRow key={student.id}>
                   <TableCell className="font-mono text-xs">{student.matricula}</TableCell>
                   <TableCell className="font-medium">{student.nome}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{student.email || "-"}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                       <MoreHorizontal className="h-4 w-4" />
