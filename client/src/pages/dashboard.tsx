@@ -48,6 +48,7 @@ export default function Dashboard() {
   const { data: classes, isLoading } = useClasses();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const createClassMutation = useCreateClass();
+  const { user } = useAuth();
 
   const form = useForm<CreateClassForm>({
     resolver: zodResolver(createClassSchema),
@@ -81,7 +82,7 @@ export default function Dashboard() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Painel de Controle</h1>
             <p className="text-muted-foreground mt-1">
-              {useAuth().user?.perfil === "admin" 
+              {user?.perfil === "admin" 
                 ? "Visualizando todas as turmas do sistema." 
                 : "Gerencie suas turmas e acompanhe o progresso dos alunos."}
             </p>

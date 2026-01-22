@@ -15,7 +15,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export function LayoutShell({ children }: { children: ReactNode }) {
-  const { user, logout, isLoggingOut } = useAuth();
+  const { user, logout } = useAuth();
   const [location] = useLocation();
 
   const navItems = [
