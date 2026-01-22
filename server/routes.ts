@@ -98,9 +98,26 @@ export async function registerRoutes(
     if (!turma) return res.status(404).json({ mensagem: "Turma não encontrada" });
 
     const alunos = await storage.getAlunosDaTurma(id);
-    const avaliacoes = await storage.getAvaliacoesDaTurma(id);
+    const unidadesCurriculares = await storage.getUnidadesCurricularesDaTurma(id);
 
-    res.json({ ...turma, alunos, avaliacoes });
+    res.json({ ...turma, alunos, unidadesCurriculares });
+  });
+
+  app.post("/api/turmas/:id/unidades-curriculares", autenticar, async (req: any, res) => {
+    const turmaId = Number(req.params.id);
+    try {
+      const { nome } = req.body;
+      const uc = await storage.criarUnidadeCurricular({ nome, turmaId });
+      res.status(201).json(uc);
+    } catch (err) {
+      res.status(400).json({ mensagem: "Erro ao criar unidade curricular" });
+    }
+  });
+
+  app.get("/api/turmas/:id/unidades-curriculares", autenticar, async (req, res) => {
+    const turmaId = Number(req.params.id);
+    const ucs = await storage.getUnidadesCurricularesDaTurma(turmaId);
+    res.json(ucs);
   });
 
   app.post(api.turmas.criar.path, autenticar, async (req: any, res) => {
@@ -137,15 +154,21 @@ export async function registerRoutes(
   });
 
   // Avaliações
-  app.post(api.avaliacoes.criar.path, autenticar, async (req, res) => {
-    const turmaId = Number(req.params.id);
+  app.post("/api/unidades-curriculares/:id/avaliacoes", autenticar, async (req, res) => {
+    const unidadeCurricularId = Number(req.params.id);
     try {
       const input = api.avaliacoes.criar.input.parse(req.body);
-      const avaliacao = await storage.criarAvaliacao({ ...input, turmaId });
+      const avaliacao = await storage.criarAvaliacao({ ...input, unidadeCurricularId });
       res.status(201).json(avaliacao);
     } catch (err) {
       res.status(400).json({ mensagem: "Erro de validação" });
     }
+  });
+
+  app.get("/api/unidades-curriculares/:id/avaliacoes", autenticar, async (req, res) => {
+    const unidadeCurricularId = Number(req.params.id);
+    const avaliacoes = await storage.getAvaliacoesDaUnidadeCurricular(unidadeCurricularId);
+    res.json(avaliacoes);
   });
 
   // Notas

@@ -37,7 +37,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const createClassSchema = z.object({
   nome: z.string().min(2, "O nome deve ter pelo menos 2 caracteres"),
-  unidadeCurricular: z.string().min(2, "A unidade deve ter pelo menos 2 caracteres"),
   ano: z.string().transform(val => parseInt(val, 10)),
   semestre: z.string().transform(val => parseInt(val, 10)),
 });
@@ -54,7 +53,6 @@ export default function Dashboard() {
     resolver: zodResolver(createClassSchema),
     defaultValues: {
       nome: "",
-      unidadeCurricular: "",
       ano: new Date().getFullYear().toString(),
       semestre: "1",
     },
@@ -113,20 +111,6 @@ export default function Dashboard() {
                         <FormLabel>Nome da Turma</FormLabel>
                         <FormControl>
                           <Input placeholder="ex: Turma A - 2024" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="unidadeCurricular"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Unidade Curricular</FormLabel>
-                        <FormControl>
-                          <Input placeholder="ex: Lógica de Programação" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -221,7 +205,7 @@ function ClassCard({ cls }: { cls: any }) {
             {cls.nome}
           </h3>
           <p className="mt-1.5 text-sm text-muted-foreground line-clamp-1 font-medium">
-            {cls.unidadeCurricular}
+            {cls.ano} • {cls.semestre}º Semestre
           </p>
         </div>
       </div>

@@ -1,9 +1,12 @@
+import { queryClient } from "@/lib/queryClient";
+import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useParams, Link } from "wouter";
 import { useClass, useDeleteClass } from "@/hooks/use-classes";
 import { useStudents, useEnrollStudent, useCreateManyStudents } from "@/hooks/use-students";
 import { useCreateEvaluation } from "@/hooks/use-evaluations";
 import { useClassGrades, useUpdateGrade } from "@/hooks/use-grades";
+import { useUnidadesCurriculares, useCreateUnidadeCurricular } from "@/hooks/use-unidades-curriculares";
 import { LayoutShell } from "@/components/layout-shell";
 import {
   ArrowLeft,
@@ -14,7 +17,8 @@ import {
   AlertCircle,
   Users,
   MoreHorizontal,
-  Upload
+  Upload,
+  BookOpen
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -57,8 +61,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const createEvaluationSchema = z.object({
+  unidadeCurricularId: z.string().min(1, "Selecione a unidade"),
   nome: z.string().min(2, "Nome obrigatório"),
   notaMaxima: z.string().transform(val => parseFloat(val) || 10),
   peso: z.string().transform(val => parseFloat(val) || 1),
@@ -91,7 +97,7 @@ export default function ClassDetails() {
                   {classData.ano} • {classData.semestre}º Sem.
                 </Badge>
               </div>
-              <p className="text-muted-foreground font-medium">{classData.unidadeCurricular}</p>
+              <p className="text-muted-foreground font-medium">Turma</p>
             </div>
           </div>
 
@@ -134,6 +140,12 @@ export default function ClassDetails() {
               Alunos
             </TabsTrigger>
             <TabsTrigger 
+              value="unidades" 
+              className="rounded-none border-b-2 border-transparent px-4 py-3 font-medium data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary"
+            >
+              Unidades Curriculares
+            </TabsTrigger>
+            <TabsTrigger 
               value="evaluations" 
               className="rounded-none border-b-2 border-transparent px-4 py-3 font-medium data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary"
             >
@@ -151,8 +163,15 @@ export default function ClassDetails() {
             <StudentsTab enrolledStudents={classData.alunos || []} classId={classId} />
           </TabsContent>
 
+          <TabsContent value="unidades" className="animate-in fade-in-50 slide-in-from-bottom-2 duration-300">
+            <UnidadesTab classId={classId} unidades={classData.unidadesCurriculares || []} />
+          </TabsContent>
+
           <TabsContent value="evaluations" className="animate-in fade-in-50 slide-in-from-bottom-2 duration-300">
-            <EvaluationsTab evaluations={classData.avaliacoes || []} classId={classId} />
+            <EvaluationsTab 
+              evaluations={classData.avaliacoes || []} 
+              unidades={classData.unidadesCurriculares || []} 
+            />
           </TabsContent>
 
           <TabsContent value="grades" className="animate-in fade-in-50 slide-in-from-bottom-2 duration-300">
@@ -349,13 +368,116 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
   );
 }
 
-function EvaluationsTab({ classId, evaluations }: { classId: number, evaluations: any[] }) {
+function UnidadesTab({ classId, unidades }: { classId: number, unidades: any[] }) {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const createMutation = useCreateEvaluation(classId);
+  const [nome, setNome] = useState("");
+  const createMutation = useCreateUnidadeCurricular(classId);
+
+  const handleCreate = () => {
+    if (nome) {
+      createMutation.mutate(nome, {
+        onSuccess: () => {
+          setDialogOpen(false);
+          setNome("");
+        }
+      });
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <div className="space-y-1">
+          <CardTitle>Unidades Curriculares</CardTitle>
+          <CardDescription>Matérias associadas a esta turma</CardDescription>
+        </div>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Adicionar Unidade
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Nova Unidade Curricular</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label htmlFor="uc-nome">Nome da Unidade</Label>
+                <Input 
+                  id="uc-nome" 
+                  placeholder="ex: Lógica de Programação" 
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                />
+              </div>
+              <DialogFooter>
+                <Button onClick={handleCreate} disabled={!nome || createMutation.isPending}>
+                  {createMutation.isPending ? "Criando..." : "Criar"}
+                </Button>
+              </DialogFooter>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </CardHeader>
+      <CardContent>
+        {unidades.length === 0 ? (
+          <div className="flex h-40 flex-col items-center justify-center text-center text-muted-foreground border-2 border-dashed rounded-xl">
+            <BookOpen className="h-8 w-8 mb-2 opacity-50" />
+            <p>Nenhuma unidade curricular criada ainda</p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {unidades.map((uc) => (
+                <TableRow key={uc.id}>
+                  <TableCell className="font-medium">{uc.nome}</TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function EvaluationsTab({ evaluations, unidades }: { evaluations: any[], unidades: any[] }) {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedUcId, setSelectedUcId] = useState<number | null>(null);
+  
+  // Custom hook for create evaluation needs to handle selectedUcId
+  const createMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const { unidadeCurricularId, ...rest } = data;
+      const res = await fetch(`/api/unidades-curriculares/${unidadeCurricularId}/avaliacoes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(rest),
+      });
+      if (!res.ok) throw new Error("Erro ao criar avaliação");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.turmas.obter.path] });
+    }
+  });
   
   const form = useForm({
     resolver: zodResolver(createEvaluationSchema),
-    defaultValues: { nome: "", notaMaxima: "10", peso: "1" }
+    defaultValues: { nome: "", notaMaxima: "10", peso: "1", unidadeCurricularId: "" }
   });
 
   const onSubmit = (data: any) => {
@@ -376,7 +498,7 @@ function EvaluationsTab({ classId, evaluations }: { classId: number, evaluations
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button disabled={unidades.length === 0}>
               <Plus className="mr-2 h-4 w-4" />
               Adicionar Avaliação
             </Button>
@@ -384,15 +506,42 @@ function EvaluationsTab({ classId, evaluations }: { classId: number, evaluations
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Nova Avaliação</DialogTitle>
+              {unidades.length === 0 && (
+                <DialogDescription className="text-destructive font-medium">
+                  Crie uma unidade curricular primeiro!
+                </DialogDescription>
+              )}
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
                 <FormField
                   control={form.control}
+                  name="unidadeCurricularId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Unidade Curricular</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a unidade" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {unidades.map(uc => (
+                            <SelectItem key={uc.id} value={uc.id.toString()}>{uc.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
                   name="nome"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nome</FormLabel>
+                      <FormLabel>Nome da Avaliação</FormLabel>
                       <FormControl><Input placeholder="Prova 1" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -441,24 +590,29 @@ function EvaluationsTab({ classId, evaluations }: { classId: number, evaluations
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
+                <TableHead>Unidade</TableHead>
                 <TableHead>Nota Máxima</TableHead>
                 <TableHead>Peso</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {evaluations.map((evalItem) => (
-                <TableRow key={evalItem.id}>
-                  <TableCell className="font-medium">{evalItem.nome}</TableCell>
-                  <TableCell>{evalItem.notaMaxima}</TableCell>
-                  <TableCell>{evalItem.peso}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {evaluations.map((evalItem) => {
+                const uc = unidades.find(u => u.id === evalItem.unidadeCurricularId);
+                return (
+                  <TableRow key={evalItem.id}>
+                    <TableCell className="font-medium">{evalItem.nome}</TableCell>
+                    <TableCell>{uc?.nome || "-"}</TableCell>
+                    <TableCell>{evalItem.notaMaxima}</TableCell>
+                    <TableCell>{evalItem.peso}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         )}

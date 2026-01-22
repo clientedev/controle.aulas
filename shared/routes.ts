@@ -87,7 +87,7 @@ export const api = {
       method: 'GET' as const,
       path: '/api/turmas/:id',
       responses: {
-        200: z.custom<typeof turmas.$inferSelect & { alunos: any[], avaliacoes: any[] }>(),
+        200: z.custom<typeof turmas.$inferSelect & { alunos: any[], unidadesCurriculares: any[] }>(),
         404: esquemasErro.naoEncontrado,
       },
     },
@@ -115,6 +115,24 @@ export const api = {
       responses: {
         204: z.void(),
         404: esquemasErro.naoEncontrado,
+      },
+    },
+  },
+  unidadesCurriculares: {
+    criar: {
+      method: 'POST' as const,
+      path: '/api/turmas/:id/unidades-curriculares',
+      input: z.object({ nome: z.string() }),
+      responses: {
+        201: z.custom<UnidadeCurricular>(),
+        400: esquemasErro.validacao,
+      },
+    },
+    listar: {
+      method: 'GET' as const,
+      path: '/api/turmas/:id/unidades-curriculares',
+      responses: {
+        200: z.array(z.custom<UnidadeCurricular>()),
       },
     },
   },
@@ -148,8 +166,8 @@ export const api = {
   avaliacoes: {
     criar: {
       method: 'POST' as const,
-      path: '/api/turmas/:id/avaliacoes',
-      input: insertAvaliacaoSchema.omit({ id: true, turmaId: true }),
+      path: '/api/unidades-curriculares/:id/avaliacoes',
+      input: insertAvaliacaoSchema.omit({ id: true, unidadeCurricularId: true }),
       responses: {
         201: z.custom<typeof avaliacoes.$inferSelect>(),
         400: esquemasErro.validacao,
@@ -158,7 +176,7 @@ export const api = {
     },
     listar: {
       method: 'GET' as const,
-      path: '/api/turmas/:id/avaliacoes',
+      path: '/api/unidades-curriculares/:id/avaliacoes',
       responses: {
         200: z.array(z.custom<typeof avaliacoes.$inferSelect>()),
         404: esquemasErro.naoEncontrado,

@@ -29,6 +29,10 @@ export interface IStorage {
   atualizarTurma(id: number, data: Partial<InsertTurma>): Promise<Turma>;
   excluirTurma(id: number): Promise<void>;
 
+  // Unidades Curriculares
+  getUnidadesCurricularesDaTurma(turmaId: number): Promise<UnidadeCurricular[]>;
+  criarUnidadeCurricular(data: InsertUnidadeCurricular): Promise<UnidadeCurricular>;
+
   // Alunos
   getAlunos(): Promise<Aluno[]>;
   criarAluno(data: InsertAluno): Promise<Aluno>;
@@ -98,6 +102,15 @@ export class DatabaseStorage implements IStorage {
     await db.delete(turmas).where(eq(turmas.id, id));
   }
 
+  async getUnidadesCurricularesDaTurma(turmaId: number): Promise<UnidadeCurricular[]> {
+    return await db.select().from(unidadesCurriculares).where(eq(unidadesCurriculares.turmaId, turmaId));
+  }
+
+  async criarUnidadeCurricular(data: InsertUnidadeCurricular): Promise<UnidadeCurricular> {
+    const [uc] = await db.insert(unidadesCurriculares).values(data).returning();
+    return uc;
+  }
+
   async getAlunos(): Promise<Aluno[]> {
     return await db.select().from(alunos);
   }
@@ -130,7 +143,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAvaliacoesDaTurma(turmaId: number): Promise<Avaliacao[]> {
-    return await db.select().from(avaliacoes).where(eq(avaliacoes.turmaId, turmaId));
+    const resultados = await db.select({
+      avaliacao: avaliacoes
+    })
+    .from(avaliacoes)
+    .innerJoin(unidadesCurriculares, eq(avaliacoes.unidadeCurricularId, unidadesCurriculares.id))
+    .where(eq(unidadesCurriculares.turmaId, turmaId));
+
+    return resultados.map(r => r.avaliacao);
+  }
+
+  async getAvaliacoesDaUnidadeCurricular(unidadeCurricularId: number): Promise<Avaliacao[]> {
+    return await db.select().from(avaliacoes).where(eq(avaliacoes.unidadeCurricularId, unidadeCurricularId));
   }
 
   async criarAvaliacao(data: InsertAvaliacao): Promise<Avaliacao> {

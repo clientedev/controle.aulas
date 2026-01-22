@@ -17,10 +17,15 @@ export const usuarios = pgTable("usuarios", {
 export const turmas = pgTable("turmas", {
   id: serial("id").primaryKey(),
   nome: text("nome").notNull(), // ex: "Turma A - 2024"
-  unidadeCurricular: text("unidade_curricular").notNull(), // ex: "Lógica de Programação"
   ano: integer("ano").notNull(),
   semestre: integer("semestre").notNull(), // 1 ou 2
   professorId: integer("professor_id").references(() => usuarios.id).notNull(),
+});
+
+export const unidadesCurriculares = pgTable("unidades_curriculares", {
+  id: serial("id").primaryKey(),
+  nome: text("nome").notNull(),
+  turmaId: integer("turma_id").references(() => turmas.id).notNull(),
 });
 
 export const alunos = pgTable("alunos", {
@@ -38,7 +43,7 @@ export const matriculas = pgTable("matriculas", {
 
 export const avaliacoes = pgTable("avaliacoes", {
   id: serial("id").primaryKey(),
-  turmaId: integer("turma_id").references(() => turmas.id).notNull(),
+  unidadeCurricularId: integer("unidade_curricular_id").references(() => unidadesCurriculares.id).notNull(),
   nome: text("nome").notNull(), // ex: "Prova 1", "Trabalho Final"
   notaMaxima: doublePrecision("nota_maxima").notNull().default(10.0),
   peso: doublePrecision("peso").default(1.0),
@@ -62,7 +67,15 @@ export const turmasRelations = relations(turmas, ({ one, many }) => ({
     fields: [turmas.professorId],
     references: [usuarios.id],
   }),
+  unidadesCurriculares: many(unidadesCurriculares),
   matriculas: many(matriculas),
+}));
+
+export const unidadesCurricularesRelations = relations(unidadesCurriculares, ({ one, many }) => ({
+  turma: one(turmas, {
+    fields: [unidadesCurriculares.turmaId],
+    references: [turmas.id],
+  }),
   avaliacoes: many(avaliacoes),
 }));
 
@@ -83,9 +96,9 @@ export const matriculasRelations = relations(matriculas, ({ one }) => ({
 }));
 
 export const avaliacoesRelations = relations(avaliacoes, ({ one, many }) => ({
-  turma: one(turmas, {
-    fields: [avaliacoes.turmaId],
-    references: [turmas.id],
+  unidadeCurricular: one(unidadesCurriculares, {
+    fields: [avaliacoes.unidadeCurricularId],
+    references: [unidadesCurriculares.id],
   }),
   notas: many(notas),
 }));
@@ -105,6 +118,7 @@ export const notasRelations = relations(notas, ({ one }) => ({
 
 export const insertUsuarioSchema = createInsertSchema(usuarios).omit({ id: true, criadoEm: true });
 export const insertTurmaSchema = createInsertSchema(turmas).omit({ id: true });
+export const insertUnidadeCurricularSchema = createInsertSchema(unidadesCurriculares).omit({ id: true });
 export const insertAlunoSchema = createInsertSchema(alunos).omit({ id: true });
 export const insertMatriculaSchema = createInsertSchema(matriculas).omit({ id: true });
 export const insertAvaliacaoSchema = createInsertSchema(avaliacoes).omit({ id: true });
@@ -116,6 +130,8 @@ export type Usuario = typeof usuarios.$inferSelect;
 export type InsertUsuario = z.infer<typeof insertUsuarioSchema>;
 export type Turma = typeof turmas.$inferSelect;
 export type InsertTurma = z.infer<typeof insertTurmaSchema>;
+export type UnidadeCurricular = typeof unidadesCurriculares.$inferSelect;
+export type InsertUnidadeCurricular = z.infer<typeof insertUnidadeCurricularSchema>;
 export type Aluno = typeof alunos.$inferSelect;
 export type InsertAluno = z.infer<typeof insertAlunoSchema>;
 export type Matricula = typeof matriculas.$inferSelect;
