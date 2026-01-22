@@ -1,147 +1,156 @@
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 import {
-  classes, students, enrollments, evaluations, grades,
-  type Class, type InsertClass, type Student, type InsertStudent,
-  type Enrollment, type Evaluation, type InsertEvaluation,
-  type Grade, type InsertGrade, type ClassWithDetails
+  usuarios, turmas, alunos, matriculas, avaliacoes, notas,
+  type Usuario, type InsertUsuario, type Turma, type InsertTurma,
+  type Aluno, type InsertAluno, type Avaliacao, type InsertAvaliacao,
+  type Nota, type InsertNota, type TurmaComDetalhes
 } from "@shared/schema";
-import { authStorage } from "./replit_integrations/auth/storage";
+import session from "express-session";
+import MemoryStore from "memorystore";
+
+const SessionStore = MemoryStore(session);
+export const sessionStore = new SessionStore({
+  checkPeriod: 86400000 // prune expired entries every 24h
+});
 
 export interface IStorage {
-  // Auth methods
-  getUser(id: string): Promise<any>; // Re-using authStorage
+  // Usuários / Auth
+  getUsuario(id: number): Promise<Usuario | undefined>;
+  getUsuarioPorEmail(email: string): Promise<Usuario | undefined>;
+  criarUsuario(data: InsertUsuario): Promise<Usuario>;
 
-  // Classes
-  getClasses(teacherId: string): Promise<Class[]>;
-  getClass(id: number): Promise<ClassWithDetails | undefined>;
-  createClass(data: InsertClass): Promise<Class>;
-  updateClass(id: number, data: Partial<InsertClass>): Promise<Class>;
-  deleteClass(id: number): Promise<void>;
+  // Turmas
+  getTurmas(professorId: number): Promise<Turma[]>;
+  getTurma(id: number): Promise<TurmaComDetalhes | undefined>;
+  criarTurma(data: InsertTurma): Promise<Turma>;
+  atualizarTurma(id: number, data: Partial<InsertTurma>): Promise<Turma>;
+  excluirTurma(id: number): Promise<void>;
 
-  // Students
-  getStudents(): Promise<Student[]>;
-  createStudent(data: InsertStudent): Promise<Student>;
-  enrollStudent(classId: number, studentId: number): Promise<void>;
-  getClassStudents(classId: number): Promise<Student[]>;
+  // Alunos
+  getAlunos(): Promise<Aluno[]>;
+  criarAluno(data: InsertAluno): Promise<Aluno>;
+  matricularAluno(turmaId: number, alunoId: number): Promise<void>;
+  getAlunosDaTurma(turmaId: number): Promise<Aluno[]>;
 
-  // Evaluations
-  getClassEvaluations(classId: number): Promise<Evaluation[]>;
-  createEvaluation(data: InsertEvaluation): Promise<Evaluation>;
+  // Avaliações
+  getAvaliacoesDaTurma(turmaId: number): Promise<Avaliacao[]>;
+  criarAvaliacao(data: InsertAvaliacao): Promise<Avaliacao>;
 
-  // Grades
-  updateGrade(data: InsertGrade): Promise<Grade>;
-  getClassGrades(classId: number): Promise<Grade[]>;
+  // Notas
+  atualizarNota(data: InsertNota): Promise<Nota>;
+  getNotasDaTurma(turmaId: number): Promise<Nota[]>;
 }
 
 export class DatabaseStorage implements IStorage {
-  async getUser(id: string) {
-    return authStorage.getUser(id);
+  async getUsuario(id: number): Promise<Usuario | undefined> {
+    const [user] = await db.select().from(usuarios).where(eq(usuarios.id, id));
+    return user;
   }
 
-  async getClasses(teacherId: string): Promise<Class[]> {
-    return await db.select().from(classes).where(eq(classes.teacherId, teacherId));
+  async getUsuarioPorEmail(email: string): Promise<Usuario | undefined> {
+    const [user] = await db.select().from(usuarios).where(eq(usuarios.email, email));
+    return user;
   }
 
-  async getClass(id: number): Promise<ClassWithDetails | undefined> {
-    const [cls] = await db.select().from(classes).where(eq(classes.id, id));
-    if (!cls) return undefined;
-
-    const studentCount = await db
-      .select({ count: enrollments.id })
-      .from(enrollments)
-      .where(eq(enrollments.classId, id));
-
-    return { ...cls, studentCount: studentCount.length };
+  async criarUsuario(data: InsertUsuario): Promise<Usuario> {
+    const [user] = await db.insert(usuarios).values(data).returning();
+    return user;
   }
 
-  async createClass(data: InsertClass): Promise<Class> {
-    const [cls] = await db.insert(classes).values(data).returning();
-    return cls;
+  async getTurmas(professorId: number): Promise<Turma[]> {
+    return await db.select().from(turmas).where(eq(turmas.professorId, professorId));
   }
 
-  async updateClass(id: number, data: Partial<InsertClass>): Promise<Class> {
-    const [cls] = await db.update(classes).set(data).where(eq(classes.id, id)).returning();
-    return cls;
+  async getTurma(id: number): Promise<TurmaComDetalhes | undefined> {
+    const [t] = await db.select().from(turmas).where(eq(turmas.id, id));
+    if (!t) return undefined;
+
+    const contagem = await db
+      .select({ count: matriculas.id })
+      .from(matriculas)
+      .where(eq(matriculas.turmaId, id));
+
+    return { ...t, contagemAlunos: contagem.length };
   }
 
-  async deleteClass(id: number): Promise<void> {
-    await db.delete(classes).where(eq(classes.id, id));
+  async criarTurma(data: InsertTurma): Promise<Turma> {
+    const [t] = await db.insert(turmas).values(data).returning();
+    return t;
   }
 
-  async getStudents(): Promise<Student[]> {
-    return await db.select().from(students);
+  async atualizarTurma(id: number, data: Partial<InsertTurma>): Promise<Turma> {
+    const [t] = await db.update(turmas).set(data).where(eq(turmas.id, id)).returning();
+    return t;
   }
 
-  async createStudent(data: InsertStudent): Promise<Student> {
-    const [student] = await db.insert(students).values(data).returning();
-    return student;
+  async excluirTurma(id: number): Promise<void> {
+    await db.delete(turmas).where(eq(turmas.id, id));
   }
 
-  async enrollStudent(classId: number, studentId: number): Promise<void> {
-    // Check if already enrolled
-    const existing = await db.select().from(enrollments)
-      .where(and(eq(enrollments.classId, classId), eq(enrollments.studentId, studentId)));
+  async getAlunos(): Promise<Aluno[]> {
+    return await db.select().from(alunos);
+  }
+
+  async criarAluno(data: InsertAluno): Promise<Aluno> {
+    const [a] = await db.insert(alunos).values(data).returning();
+    return a;
+  }
+
+  async matricularAluno(turmaId: number, alunoId: number): Promise<void> {
+    const existe = await db.select().from(matriculas)
+      .where(and(eq(matriculas.turmaId, turmaId), eq(matriculas.alunoId, alunoId)));
     
-    if (existing.length === 0) {
-      await db.insert(enrollments).values({ classId, studentId });
+    if (existe.length === 0) {
+      await db.insert(matriculas).values({ turmaId, alunoId });
     }
   }
 
-  async getClassStudents(classId: number): Promise<Student[]> {
-    const results = await db.select({
-      student: students
+  async getAlunosDaTurma(turmaId: number): Promise<Aluno[]> {
+    const resultados = await db.select({
+      aluno: alunos
     })
-    .from(enrollments)
-    .innerJoin(students, eq(enrollments.studentId, students.id))
-    .where(eq(enrollments.classId, classId));
+    .from(matriculas)
+    .innerJoin(alunos, eq(matriculas.alunoId, alunos.id))
+    .where(eq(matriculas.turmaId, turmaId));
     
-    return results.map(r => r.student);
+    return resultados.map(r => r.aluno);
   }
 
-  async getClassEvaluations(classId: number): Promise<Evaluation[]> {
-    return await db.select().from(evaluations).where(eq(evaluations.classId, classId));
+  async getAvaliacoesDaTurma(turmaId: number): Promise<Avaliacao[]> {
+    return await db.select().from(avaliacoes).where(eq(avaliacoes.turmaId, turmaId));
   }
 
-  async createEvaluation(data: InsertEvaluation): Promise<Evaluation> {
-    const [evaluation] = await db.insert(evaluations).values(data).returning();
-    return evaluation;
+  async criarAvaliacao(data: InsertAvaliacao): Promise<Avaliacao> {
+    const [a] = await db.insert(avaliacoes).values(data).returning();
+    return a;
   }
 
-  async updateGrade(data: InsertGrade): Promise<Grade> {
-    // Upsert logic for grade
-    const [existing] = await db.select().from(grades)
-      .where(and(eq(grades.evaluationId, data.evaluationId), eq(grades.studentId, data.studentId)));
+  async atualizarNota(data: InsertNota): Promise<Nota> {
+    const [existe] = await db.select().from(notas)
+      .where(and(eq(notas.avaliacaoId, data.avaliacaoId), eq(notas.alunoId, data.alunoId)));
 
-    if (existing) {
-      const [updated] = await db.update(grades)
-        .set({ score: data.score })
-        .where(eq(grades.id, existing.id))
+    if (existe) {
+      const [u] = await db.update(notas)
+        .set({ valor: data.valor })
+        .where(eq(notas.id, existe.id))
         .returning();
-      return updated;
+      return u;
     } else {
-      const [created] = await db.insert(grades).values(data).returning();
-      return created;
+      const [c] = await db.insert(notas).values(data).returning();
+      return c;
     }
   }
 
-  async getClassGrades(classId: number): Promise<Grade[]> {
-    // Get all evaluations for the class, then get grades for those evaluations
-    const evals = await this.getClassEvaluations(classId);
-    if (evals.length === 0) return [];
-    
-    const evalIds = evals.map(e => e.id);
-    // Drizzle doesn't support 'inArray' easily without importing, doing a simple fetch for now or join
-    // Better to join evaluations and grades
-    
-    const results = await db.select({
-      grade: grades
+  async getNotasDaTurma(turmaId: number): Promise<Nota[]> {
+    const resultados = await db.select({
+      nota: notas
     })
-    .from(grades)
-    .innerJoin(evaluations, eq(grades.evaluationId, evaluations.id))
-    .where(eq(evaluations.classId, classId));
+    .from(notas)
+    .innerJoin(avaliacoes, eq(notas.avaliacaoId, avaliacoes.id))
+    .where(eq(avaliacoes.turmaId, turmaId));
 
-    return results.map(r => r.grade);
+    return resultados.map(r => r.nota);
   }
 }
 

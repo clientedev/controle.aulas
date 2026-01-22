@@ -1,154 +1,148 @@
 import type { Express } from "express";
 import type { Server } from "http";
-import { storage } from "./storage";
+import { storage, sessionStore } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+import session from "express-session";
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // Auth Setup
-  await setupAuth(app);
-  registerAuthRoutes(app);
+  // Configuração de Sessão
+  app.use(session({
+    secret: process.env.SESSION_SECRET || "senai-secret-key",
+    resave: false,
+    saveUninitialized: false,
+    store: sessionStore,
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 24 * 60 * 60 * 1000 // 24 horas
+    }
+  }));
 
-  // Protected Routes Middleware
-  const protect = isAuthenticated;
+  // Middleware de Autenticação
+  const autenticar = (req: any, res: any, next: any) => {
+    if (req.session.usuarioId) {
+      next();
+    } else {
+      res.status(401).json({ mensagem: "Não autorizado" });
+    }
+  };
 
-  // Classes
-  app.get(api.classes.list.path, protect, async (req: any, res) => {
-    const teacherId = req.user.claims.sub;
-    const classes = await storage.getClasses(teacherId);
-    res.json(classes);
+  // Auth
+  app.post(api.auth.login.path, async (req, res) => {
+    const { email, senha } = req.body;
+    const usuario = await storage.getUsuarioPorEmail(email);
+
+    if (!usuario || usuario.senha !== senha) {
+      return res.status(401).json({ mensagem: "Email ou senha inválidos" });
+    }
+
+    (req.session as any).usuarioId = usuario.id;
+    res.json(usuario);
   });
 
-  app.get(api.classes.get.path, protect, async (req, res) => {
+  app.post(api.auth.logout.path, (req, res) => {
+    req.session.destroy((err) => {
+      if (err) return res.status(500).json({ mensagem: "Erro ao sair" });
+      res.json({ mensagem: "Saiu com sucesso" });
+    });
+  });
+
+  app.get(api.auth.me.path, async (req, res) => {
+    if (!(req.session as any).usuarioId) {
+      return res.status(401).json({ mensagem: "Não logado" });
+    }
+    const usuario = await storage.getUsuario((req.session as any).usuarioId);
+    res.json(usuario);
+  });
+
+  // Turmas
+  app.get(api.turmas.listar.path, autenticar, async (req: any, res) => {
+    const turmas = await storage.getTurmas(req.session.usuarioId);
+    res.json(turmas);
+  });
+
+  app.get(api.turmas.obter.path, autenticar, async (req, res) => {
     const id = Number(req.params.id);
-    const cls = await storage.getClass(id);
-    if (!cls) return res.status(404).json({ message: "Class not found" });
+    const turma = await storage.getTurma(id);
+    if (!turma) return res.status(404).json({ mensagem: "Turma não encontrada" });
 
-    const students = await storage.getClassStudents(id);
-    const evaluations = await storage.getClassEvaluations(id);
+    const alunos = await storage.getAlunosDaTurma(id);
+    const avaliacoes = await storage.getAvaliacoesDaTurma(id);
 
-    res.json({ ...cls, students, evaluations });
+    res.json({ ...turma, alunos, avaliacoes });
   });
 
-  app.post(api.classes.create.path, protect, async (req: any, res) => {
+  app.post(api.turmas.criar.path, autenticar, async (req: any, res) => {
     try {
-      const input = api.classes.create.input.parse(req.body);
-      const teacherId = req.user.claims.sub;
-      const cls = await storage.createClass({ ...input, teacherId });
-      res.status(201).json(cls);
+      const input = api.turmas.criar.input.parse(req.body);
+      const novaTurma = await storage.criarTurma({ ...input, professorId: req.session.usuarioId });
+      res.status(201).json(novaTurma);
     } catch (err) {
-      if (err instanceof z.ZodError) {
-        return res.status(400).json({
-          message: err.errors[0].message,
-          field: err.errors[0].path.join('.'),
-        });
-      }
-      throw err;
+      res.status(400).json({ mensagem: "Erro de validação" });
     }
   });
 
-  app.patch(api.classes.update.path, protect, async (req, res) => {
-    const id = Number(req.params.id);
+  // Alunos
+  app.get(api.alunos.listar.path, autenticar, async (req, res) => {
+    const alunosList = await storage.getAlunos();
+    res.json(alunosList);
+  });
+
+  app.post(api.alunos.criar.path, autenticar, async (req, res) => {
     try {
-      const input = api.classes.update.input.parse(req.body);
-      const cls = await storage.updateClass(id, input);
-      res.json(cls);
+      const input = api.alunos.criar.input.parse(req.body);
+      const aluno = await storage.criarAluno(input);
+      res.status(201).json(aluno);
     } catch (err) {
-        if (err instanceof z.ZodError) {
-            return res.status(400).json({
-              message: err.errors[0].message,
-              field: err.errors[0].path.join('.'),
-            });
-        }
-      return res.status(404).json({ message: "Class not found" });
+      res.status(400).json({ mensagem: "Erro de validação" });
     }
   });
 
-  app.delete(api.classes.delete.path, protect, async (req, res) => {
-    const id = Number(req.params.id);
-    await storage.deleteClass(id);
-    res.status(204).send();
+  app.post(api.alunos.matricular.path, autenticar, async (req, res) => {
+    const turmaId = Number(req.params.id);
+    const { alunoId } = req.body;
+    await storage.matricularAluno(turmaId, alunoId);
+    res.json({ mensagem: "Matriculado com sucesso" });
   });
 
-  // Students
-  app.get(api.students.list.path, protect, async (req, res) => {
-    const students = await storage.getStudents();
-    res.json(students);
-  });
-
-  app.post(api.students.create.path, protect, async (req, res) => {
+  // Avaliações
+  app.post(api.avaliacoes.criar.path, autenticar, async (req, res) => {
+    const turmaId = Number(req.params.id);
     try {
-      const input = api.students.create.input.parse(req.body);
-      const student = await storage.createStudent(input);
-      res.status(201).json(student);
+      const input = api.avaliacoes.criar.input.parse(req.body);
+      const avaliacao = await storage.criarAvaliacao({ ...input, turmaId });
+      res.status(201).json(avaliacao);
     } catch (err) {
-      if (err instanceof z.ZodError) {
-        return res.status(400).json({
-          message: err.errors[0].message,
-          field: err.errors[0].path.join('.'),
-        });
-      }
-      throw err;
+      res.status(400).json({ mensagem: "Erro de validação" });
     }
   });
 
-  app.post(api.students.enroll.path, protect, async (req, res) => {
-    const classId = Number(req.params.id);
-    const { studentId } = req.body;
-    await storage.enrollStudent(classId, studentId);
-    res.json({ message: "Enrolled successfully" });
-  });
-
-  // Evaluations
-  app.get(api.evaluations.list.path, protect, async (req, res) => {
-    const classId = Number(req.params.id);
-    const evaluations = await storage.getClassEvaluations(classId);
-    res.json(evaluations);
-  });
-
-  app.post(api.evaluations.create.path, protect, async (req, res) => {
-    const classId = Number(req.params.id);
+  // Notas
+  app.post(api.notas.atualizar.path, autenticar, async (req, res) => {
     try {
-      const input = api.evaluations.create.input.parse(req.body);
-      const evaluation = await storage.createEvaluation({ ...input, classId });
-      res.status(201).json(evaluation);
+      const input = api.notas.atualizar.input.parse(req.body);
+      const nota = await storage.atualizarNota(input);
+      res.json(nota);
     } catch (err) {
-      if (err instanceof z.ZodError) {
-        return res.status(400).json({
-          message: err.errors[0].message,
-          field: err.errors[0].path.join('.'),
-        });
-      }
-      throw err;
+      res.status(400).json({ mensagem: "Erro de validação" });
     }
   });
 
-  // Grades
-  app.post(api.grades.update.path, protect, async (req, res) => {
-    try {
-      const input = api.grades.update.input.parse(req.body);
-      const grade = await storage.updateGrade(input);
-      res.json(grade);
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        return res.status(400).json({
-          message: err.errors[0].message,
-          field: err.errors[0].path.join('.'),
-        });
-      }
-      throw err;
+  // Seed Admin User
+  (async () => {
+    const admin = await storage.getUsuarioPorEmail("admin@senai.br");
+    if (!admin) {
+      await storage.criarUsuario({
+        nome: "Administrador",
+        email: "admin@senai.br",
+        senha: "admin",
+        perfil: "admin"
+      });
     }
-  });
-
-  app.get(api.grades.listByClass.path, protect, async (req, res) => {
-    const classId = Number(req.params.id);
-    const grades = await storage.getClassGrades(classId);
-    res.json(grades);
-  });
+  })();
 
   return httpServer;
 }

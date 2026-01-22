@@ -1,126 +1,166 @@
 import { z } from 'zod';
-import { insertClassSchema, insertStudentSchema, insertEvaluationSchema, insertGradeSchema, classes, students, evaluations, grades } from './schema';
+import { 
+  insertUsuarioSchema, 
+  insertTurmaSchema, 
+  insertAlunoSchema, 
+  insertAvaliacaoSchema, 
+  insertNotaSchema, 
+  usuarios, 
+  turmas, 
+  alunos, 
+  avaliacoes, 
+  notas 
+} from './schema';
 
-export const errorSchemas = {
-  validation: z.object({
-    message: z.string(),
-    field: z.string().optional(),
+export const esquemasErro = {
+  validacao: z.object({
+    mensagem: z.string(),
+    campo: z.string().optional(),
   }),
-  notFound: z.object({
-    message: z.string(),
+  naoEncontrado: z.object({
+    mensagem: z.string(),
   }),
-  internal: z.object({
-    message: z.string(),
+  interno: z.object({
+    mensagem: z.string(),
   }),
 };
 
 export const api = {
-  classes: {
-    list: {
-      method: 'GET' as const,
-      path: '/api/classes',
-      responses: {
-        200: z.array(z.custom<typeof classes.$inferSelect>()),
-      },
-    },
-    get: {
-      method: 'GET' as const,
-      path: '/api/classes/:id',
-      responses: {
-        200: z.custom<typeof classes.$inferSelect & { students: any[], evaluations: any[] }>(),
-        404: errorSchemas.notFound,
-      },
-    },
-    create: {
+  auth: {
+    login: {
       method: 'POST' as const,
-      path: '/api/classes',
-      input: insertClassSchema.omit({ id: true, teacherId: true }),
+      path: '/api/login',
+      input: z.object({
+        email: z.string().email(),
+        senha: z.string(),
+      }),
       responses: {
-        201: z.custom<typeof classes.$inferSelect>(),
-        400: errorSchemas.validation,
+        200: z.custom<typeof usuarios.$inferSelect>(),
+        401: z.object({ mensagem: z.string() }),
       },
     },
-    update: {
+    logout: {
+      method: 'POST' as const,
+      path: '/api/logout',
+      responses: {
+        200: z.object({ mensagem: z.string() }),
+      },
+    },
+    me: {
+      method: 'GET' as const,
+      path: '/api/me',
+      responses: {
+        200: z.custom<typeof usuarios.$inferSelect>(),
+        401: z.object({ mensagem: z.string() }),
+      },
+    },
+  },
+  turmas: {
+    listar: {
+      method: 'GET' as const,
+      path: '/api/turmas',
+      responses: {
+        200: z.array(z.custom<typeof turmas.$inferSelect>()),
+      },
+    },
+    obter: {
+      method: 'GET' as const,
+      path: '/api/turmas/:id',
+      responses: {
+        200: z.custom<typeof turmas.$inferSelect & { alunos: any[], avaliacoes: any[] }>(),
+        404: esquemasErro.naoEncontrado,
+      },
+    },
+    criar: {
+      method: 'POST' as const,
+      path: '/api/turmas',
+      input: insertTurmaSchema.omit({ id: true, professorId: true }),
+      responses: {
+        201: z.custom<typeof turmas.$inferSelect>(),
+        400: esquemasErro.validacao,
+      },
+    },
+    atualizar: {
       method: 'PATCH' as const,
-      path: '/api/classes/:id',
-      input: insertClassSchema.omit({ id: true, teacherId: true }).partial(),
+      path: '/api/turmas/:id',
+      input: insertTurmaSchema.omit({ id: true, professorId: true }).partial(),
       responses: {
-        200: z.custom<typeof classes.$inferSelect>(),
-        404: errorSchemas.notFound,
+        200: z.custom<typeof turmas.$inferSelect>(),
+        404: esquemasErro.naoEncontrado,
       },
     },
-    delete: {
+    excluir: {
       method: 'DELETE' as const,
-      path: '/api/classes/:id',
+      path: '/api/turmas/:id',
       responses: {
         204: z.void(),
-        404: errorSchemas.notFound,
+        404: esquemasErro.naoEncontrado,
       },
     },
   },
-  students: {
-    list: {
+  alunos: {
+    listar: {
       method: 'GET' as const,
-      path: '/api/students',
+      path: '/api/alunos',
       responses: {
-        200: z.array(z.custom<typeof students.$inferSelect>()),
+        200: z.array(z.custom<typeof alunos.$inferSelect>()),
       },
     },
-    create: {
+    criar: {
       method: 'POST' as const,
-      path: '/api/students',
-      input: insertStudentSchema.omit({ id: true }),
+      path: '/api/alunos',
+      input: insertAlunoSchema.omit({ id: true }),
       responses: {
-        201: z.custom<typeof students.$inferSelect>(),
-        400: errorSchemas.validation,
+        201: z.custom<typeof alunos.$inferSelect>(),
+        400: esquemasErro.validacao,
       },
     },
-    enroll: {
+    matricular: {
       method: 'POST' as const,
-      path: '/api/classes/:id/enroll',
-      input: z.object({ studentId: z.number() }),
+      path: '/api/turmas/:id/matricular',
+      input: z.object({ alunoId: z.number() }),
       responses: {
-        200: z.object({ message: z.string() }),
-        404: errorSchemas.notFound,
+        200: z.object({ mensagem: z.string() }),
+        404: esquemasErro.naoEncontrado,
       },
     },
   },
-  evaluations: {
-    create: {
+  avaliacoes: {
+    criar: {
       method: 'POST' as const,
-      path: '/api/classes/:id/evaluations',
-      input: insertEvaluationSchema.omit({ id: true, classId: true }),
+      path: '/api/turmas/:id/avaliacoes',
+      input: insertAvaliacaoSchema.omit({ id: true, turmaId: true }),
       responses: {
-        201: z.custom<typeof evaluations.$inferSelect>(),
-        400: errorSchemas.validation,
-        404: errorSchemas.notFound,
+        201: z.custom<typeof avaliacoes.$inferSelect>(),
+        400: esquemasErro.validacao,
+        404: esquemasErro.naoEncontrado,
       },
     },
-    list: {
+    listar: {
       method: 'GET' as const,
-      path: '/api/classes/:id/evaluations',
+      path: '/api/turmas/:id/avaliacoes',
       responses: {
-        200: z.array(z.custom<typeof evaluations.$inferSelect>()),
-        404: errorSchemas.notFound,
+        200: z.array(z.custom<typeof avaliacoes.$inferSelect>()),
+        404: esquemasErro.naoEncontrado,
       },
     },
   },
-  grades: {
-    update: {
+  notas: {
+    atualizar: {
       method: 'POST' as const,
-      path: '/api/grades',
-      input: insertGradeSchema.omit({ id: true }),
+      path: '/api/notas',
+      input: insertNotaSchema.omit({ id: true }),
       responses: {
-        200: z.custom<typeof grades.$inferSelect>(),
-        400: errorSchemas.validation,
+        200: z.custom<typeof notas.$inferSelect>(),
+        400: esquemasErro.validacao,
       },
     },
-    listByClass: {
+    listarPorTurma: {
       method: 'GET' as const,
-      path: '/api/classes/:id/grades',
+      path: '/api/turmas/:id/notas',
       responses: {
-        200: z.array(z.custom<typeof grades.$inferSelect>()),
-        404: errorSchemas.notFound,
+        200: z.array(z.custom<typeof notas.$inferSelect>()),
+        404: esquemasErro.naoEncontrado,
       },
     },
   }
