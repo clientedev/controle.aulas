@@ -5,71 +5,66 @@ import { z } from "zod";
 
 async function handleResponse<T>(res: Response, schema: z.ZodSchema<T>): Promise<T> {
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: "An error occurred" }));
-    throw new Error(error.message || `Error ${res.status}`);
+    const error = await res.json().catch(() => ({ mensagem: "Ocorreu um erro" }));
+    throw new Error(error.mensagem || `Erro ${res.status}`);
   }
   const data = await res.json();
   return schema.parse(data);
 }
 
-// GET /api/students
 export function useStudents() {
   return useQuery({
-    queryKey: [api.students.list.path],
+    queryKey: [api.alunos.listar.path],
     queryFn: async () => {
-      const res = await fetch(api.students.list.path, { credentials: "include" });
-      return handleResponse(res, api.students.list.responses[200]);
+      const res = await fetch(api.alunos.listar.path);
+      return handleResponse(res, api.alunos.listar.responses[200]);
     },
   });
 }
 
-// POST /api/students (Create Student)
 export function useCreateStudent() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (data: z.infer<typeof api.students.create.input>) => {
-      const res = await fetch(api.students.create.path, {
-        method: api.students.create.method,
+    mutationFn: async (data: z.infer<typeof api.alunos.criar.input>) => {
+      const res = await fetch(api.alunos.criar.path, {
+        method: api.alunos.criar.method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
-        credentials: "include",
       });
-      return handleResponse(res, api.students.create.responses[201]);
+      return handleResponse(res, api.alunos.criar.responses[201]);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.students.list.path] });
-      toast({ title: "Success", description: "Student created successfully" });
+      queryClient.invalidateQueries({ queryKey: [api.alunos.listar.path] });
+      toast({ title: "Sucesso", description: "Aluno criado com sucesso" });
     },
     onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
     },
   });
 }
 
-// POST /api/classes/:id/enroll (Enroll Student in Class)
-export function useEnrollStudent(classId: number) {
+export function useEnrollStudent(turmaId: number) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (studentId: number) => {
-      const url = buildUrl(api.students.enroll.path, { id: classId });
+    mutationFn: async (alunoId: number) => {
+      const url = buildUrl(api.alunos.matricular.path, { id: turmaId });
       const res = await fetch(url, {
-        method: api.students.enroll.method,
+        method: api.alunos.matricular.method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ studentId }),
-        credentials: "include",
+        body: JSON.stringify({ alunoId }),
       });
-      return handleResponse(res, api.students.enroll.responses[200]);
+      return handleResponse(res, api.alunos.matricular.responses[200]);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.classes.get.path, classId] });
-      toast({ title: "Success", description: "Student enrolled successfully" });
+      queryClient.invalidateQueries({ queryKey: [api.turmas.obter.path, turmaId] });
+      toast({ title: "Sucesso", description: "Aluno matriculado com sucesso" });
     },
     onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
     },
   });
 }

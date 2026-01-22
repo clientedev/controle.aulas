@@ -5,54 +5,49 @@ import { z } from "zod";
 
 async function handleResponse<T>(res: Response, schema: z.ZodSchema<T>): Promise<T> {
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: "An error occurred" }));
-    throw new Error(error.message || `Error ${res.status}`);
+    const error = await res.json().catch(() => ({ mensagem: "Ocorreu um erro" }));
+    throw new Error(error.mensagem || `Erro ${res.status}`);
   }
   const data = await res.json();
   return schema.parse(data);
 }
 
-// GET /api/classes/:id/grades
-export function useClassGrades(classId: number) {
+export function useClassGrades(turmaId: number) {
   return useQuery({
-    queryKey: [api.grades.listByClass.path, classId],
+    queryKey: [api.notas.listarPorTurma.path, turmaId],
     queryFn: async () => {
-      const url = buildUrl(api.grades.listByClass.path, { id: classId });
-      const res = await fetch(url, { credentials: "include" });
-      return handleResponse(res, api.grades.listByClass.responses[200]);
+      const url = buildUrl(api.notas.listarPorTurma.path, { id: turmaId });
+      const res = await fetch(url);
+      return handleResponse(res, api.notas.listarPorTurma.responses[200]);
     },
-    enabled: !!classId,
+    enabled: !!turmaId,
   });
 }
 
-// POST /api/grades
-export function useUpdateGrade(classId: number) {
+export function useUpdateGrade(turmaId: number) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (data: z.infer<typeof api.grades.update.input>) => {
-       // Coerce numeric inputs
+    mutationFn: async (data: z.infer<typeof api.notas.atualizar.input>) => {
        const payload = {
         ...data,
-        score: Number(data.score),
+        valor: Number(data.valor),
       };
 
-      const res = await fetch(api.grades.update.path, {
-        method: api.grades.update.method,
+      const res = await fetch(api.notas.atualizar.path, {
+        method: api.notas.atualizar.method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-        credentials: "include",
       });
-      return handleResponse(res, api.grades.update.responses[200]);
+      return handleResponse(res, api.notas.atualizar.responses[200]);
     },
     onSuccess: () => {
-      // Invalidate grades for this class to refresh matrix
-      queryClient.invalidateQueries({ queryKey: [api.grades.listByClass.path, classId] });
-      toast({ title: "Saved", description: "Grade updated successfully" });
+      queryClient.invalidateQueries({ queryKey: [api.notas.listarPorTurma.path, turmaId] });
+      toast({ title: "Salvo", description: "Nota atualizada com sucesso" });
     },
     onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
     },
   });
 }
