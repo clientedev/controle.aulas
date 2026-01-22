@@ -152,6 +152,12 @@ export default function ClassDetails() {
               Avaliações
             </TabsTrigger>
             <TabsTrigger 
+              value="attendance" 
+              className="rounded-none border-b-2 border-transparent px-4 py-3 font-medium data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary"
+            >
+              Frequência
+            </TabsTrigger>
+            <TabsTrigger 
               value="grades" 
               className="rounded-none border-b-2 border-transparent px-4 py-3 font-medium data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary"
             >
@@ -172,6 +178,10 @@ export default function ClassDetails() {
               evaluations={classData.avaliacoes || []} 
               unidades={classData.unidadesCurriculares || []} 
             />
+          </TabsContent>
+
+          <TabsContent value="attendance" className="animate-in fade-in-50 slide-in-from-bottom-2 duration-300">
+            <AttendanceTab classId={classId} students={classData.alunos || []} />
           </TabsContent>
 
           <TabsContent value="grades" className="animate-in fade-in-50 slide-in-from-bottom-2 duration-300">
@@ -618,6 +628,224 @@ function EvaluationsTab({ evaluations, unidades }: { evaluations: any[], unidade
         )}
       </CardContent>
     </Card>
+  );
+}
+
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Calendar as CalendarIcon, Clock, Check, X, Minus, BookOpen } from "lucide-react";
+
+function AttendanceTab({ classId, students }: { classId: number, students: any[] }) {
+  const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
+  
+  const { data: schedule } = useQuery<any[]>({
+    queryKey: ["/api/turmas", classId, "horarios"],
+    queryFn: async () => {
+      const res = await fetch(`/api/turmas/${classId}/horarios`);
+      return res.json();
+    }
+  });
+
+  const { data: attendanceData, refetch: refetchAttendance } = useQuery<any[]>({
+    queryKey: ["/api/turmas", classId, "frequencia", date],
+    queryFn: async () => {
+      const res = await fetch(`/api/turmas/${classId}/frequencia?data=${date}`);
+      return res.json();
+    }
+  });
+
+  const registerMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch(`/api/turmas/${classId}/frequencia`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      return res.json();
+    },
+    onSuccess: () => refetchAttendance()
+  });
+
+  const createScheduleMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch(`/api/turmas/${classId}/horarios`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/turmas", classId, "horarios"] });
+      setShowScheduleDialog(false);
+    }
+  });
+
+  const deleteScheduleMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await fetch(`/api/horarios/${id}`, { method: "DELETE" });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/turmas", classId, "horarios"] })
+  });
+
+  const daysOfWeek = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+
+  const getStatus = (studentId: number) => {
+    return attendanceData?.find(a => a.alunoId === studentId)?.status;
+  };
+
+  const handleStatusChange = (studentId: number, status: string) => {
+    registerMutation.mutate({
+      alunoId: studentId,
+      turmaId: classId,
+      data: date,
+      status
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-4">
+          <Input 
+            type="date" 
+            value={date} 
+            onChange={(e) => setDate(e.target.value)} 
+            className="w-48"
+          />
+          <Badge variant="outline" className="h-9 px-3">
+            {format(new Date(date + "T00:00:00"), "EEEE, d 'de' MMMM", { locale: ptBR })}
+          </Badge>
+        </div>
+        <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
+          <DialogTrigger asChild>
+            <Button variant="outline">
+              <Clock className="mr-2 h-4 w-4" />
+              Configurar Horários
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Horários da Turma</DialogTitle>
+              <DialogDescription>Defina os dias e horários das aulas</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <div className="space-y-4">
+                {schedule?.map((h) => (
+                  <div key={h.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+                    <div>
+                      <span className="font-semibold">{daysOfWeek[h.diaSemana]}</span>
+                      <p className="text-sm text-muted-foreground">{h.horarioInicio} - {h.horarioFim}</p>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => deleteScheduleMutation.mutate(h.id)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                createScheduleMutation.mutate({
+                  diaSemana: Number(formData.get("diaSemana")),
+                  horarioInicio: formData.get("inicio"),
+                  horarioFim: formData.get("fim")
+                });
+              }} className="space-y-4 pt-4 border-t">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Dia da Semana</Label>
+                    <Select name="diaSemana" defaultValue="1">
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {daysOfWeek.map((day, i) => (
+                          <SelectItem key={i} value={i.toString()}>{day}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Horário Início</Label>
+                    <Input name="inicio" type="time" required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Horário Fim</Label>
+                    <Input name="fim" type="time" required />
+                  </div>
+                </div>
+                <Button type="submit" className="w-full" disabled={createScheduleMutation.isPending}>
+                  Adicionar Horário
+                </Button>
+              </form>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Chamada</CardTitle>
+          <CardDescription>Registre a presença dos alunos para este dia</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Aluno</TableHead>
+                <TableHead className="text-center w-[300px]">Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {students.map((student) => {
+                const status = getStatus(student.id);
+                return (
+                  <TableRow key={student.id}>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{student.nome}</span>
+                        <span className="text-xs text-muted-foreground">{student.matricula}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-center gap-2">
+                        <Button 
+                          size="sm" 
+                          variant={status === "presente" ? "default" : "outline"}
+                          className={status === "presente" ? "bg-green-600 hover:bg-green-700" : "hover:text-green-600 hover:border-green-600"}
+                          onClick={() => handleStatusChange(student.id, "presente")}
+                        >
+                          <Check className="mr-1 h-3 w-3" /> Presença
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant={status === "atraso" ? "default" : "outline"}
+                          className={status === "atraso" ? "bg-yellow-600 hover:bg-yellow-700" : "hover:text-yellow-600 hover:border-yellow-600"}
+                          onClick={() => handleStatusChange(student.id, "atraso")}
+                        >
+                          <Clock className="mr-1 h-3 w-3" /> Atraso
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant={status === "falta" ? "default" : "outline"}
+                          className={status === "falta" ? "bg-destructive hover:bg-destructive/90" : "hover:text-destructive hover:border-destructive"}
+                          onClick={() => handleStatusChange(student.id, "falta")}
+                        >
+                          <X className="mr-1 h-3 w-3" /> Falta
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 

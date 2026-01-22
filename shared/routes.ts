@@ -201,7 +201,48 @@ export const api = {
         404: esquemasErro.naoEncontrado,
       },
     },
-  }
+  },
+  frequencia: {
+    listar: {
+      method: 'GET' as const,
+      path: '/api/turmas/:id/frequencia',
+      responses: {
+        200: z.array(z.custom<typeof frequencia.$inferSelect>()),
+      },
+    },
+    registrar: {
+      method: 'POST' as const,
+      path: '/api/turmas/:id/frequencia',
+      input: insertFrequenciaSchema,
+      responses: {
+        200: z.custom<typeof frequencia.$inferSelect>(),
+      },
+    },
+  },
+  horarios: {
+    listar: {
+      method: 'GET' as const,
+      path: '/api/turmas/:id/horarios',
+      responses: {
+        200: z.array(z.custom<typeof horarios.$inferSelect>()),
+      },
+    },
+    criar: {
+      method: 'POST' as const,
+      path: '/api/turmas/:id/horarios',
+      input: insertHorarioSchema.omit({ turmaId: true }),
+      responses: {
+        201: z.custom<typeof horarios.$inferSelect>(),
+      },
+    },
+    excluir: {
+      method: 'DELETE' as const,
+      path: '/api/horarios/:id',
+      responses: {
+        204: z.void(),
+      },
+    },
+  },
 };
 
 export function buildUrl(path: string, params?: Record<string, string | number>): string {

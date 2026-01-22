@@ -114,6 +114,40 @@ export const notasRelations = relations(notas, ({ one }) => ({
   }),
 }));
 
+export const horarios = pgTable("horarios", {
+  id: serial("id").primaryKey(),
+  turmaId: integer("turma_id").references(() => turmas.id).notNull(),
+  diaSemana: integer("dia_semana").notNull(), // 0-6 (dom-sab)
+  horarioInicio: text("horario_inicio").notNull(), // HH:mm
+  horarioFim: text("horario_fim").notNull(), // HH:mm
+});
+
+export const frequencia = pgTable("frequencia", {
+  id: serial("id").primaryKey(),
+  alunoId: integer("aluno_id").references(() => alunos.id).notNull(),
+  turmaId: integer("turma_id").references(() => turmas.id).notNull(),
+  data: text("data").notNull(), // YYYY-MM-DD
+  status: text("status").notNull(), // "presente", "falta", "atraso"
+});
+
+export const horariosRelations = relations(horarios, ({ one }) => ({
+  turma: one(turmas, {
+    fields: [horarios.turmaId],
+    references: [turmas.id],
+  }),
+}));
+
+export const frequenciaRelations = relations(frequencia, ({ one }) => ({
+  aluno: one(alunos, {
+    fields: [frequencia.alunoId],
+    references: [alunos.id],
+  }),
+  turma: one(turmas, {
+    fields: [frequencia.turmaId],
+    references: [turmas.id],
+  }),
+}));
+
 // === ESQUEMAS DE INSERÇÃO ===
 
 export const insertUsuarioSchema = createInsertSchema(usuarios).omit({ id: true, criadoEm: true });
@@ -123,6 +157,8 @@ export const insertAlunoSchema = createInsertSchema(alunos).omit({ id: true });
 export const insertMatriculaSchema = createInsertSchema(matriculas).omit({ id: true });
 export const insertAvaliacaoSchema = createInsertSchema(avaliacoes).omit({ id: true });
 export const insertNotaSchema = createInsertSchema(notas).omit({ id: true });
+export const insertHorarioSchema = createInsertSchema(horarios).omit({ id: true });
+export const insertFrequenciaSchema = createInsertSchema(frequencia).omit({ id: true });
 
 // === TIPOS DE CONTRATO DA API ===
 
@@ -139,6 +175,10 @@ export type Avaliacao = typeof avaliacoes.$inferSelect;
 export type InsertAvaliacao = z.infer<typeof insertAvaliacaoSchema>;
 export type Nota = typeof notas.$inferSelect;
 export type InsertNota = z.infer<typeof insertNotaSchema>;
+export type Horario = typeof horarios.$inferSelect;
+export type InsertHorario = z.infer<typeof insertHorarioSchema>;
+export type Frequencia = typeof frequencia.$inferSelect;
+export type InsertFrequencia = z.infer<typeof insertFrequenciaSchema>;
 
 export type CriarTurmaRequest = Omit<InsertTurma, "professorId">;
 export type AtualizarTurmaRequest = Partial<CriarTurmaRequest>;

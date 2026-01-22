@@ -182,6 +182,38 @@ export async function registerRoutes(
     }
   });
 
+  // Horários
+  app.get("/api/turmas/:id/horarios", autenticar, async (req, res) => {
+    const id = Number(req.params.id);
+    const result = await storage.getHorariosDaTurma(id);
+    res.json(result);
+  });
+
+  app.post("/api/turmas/:id/horarios", autenticar, async (req, res) => {
+    const id = Number(req.params.id);
+    const result = await storage.criarHorario({ ...req.body, turmaId: id });
+    res.status(201).json(result);
+  });
+
+  app.delete("/api/horarios/:id", autenticar, async (req, res) => {
+    const id = Number(req.params.id);
+    await storage.excluirHorario(id);
+    res.status(204).end();
+  });
+
+  // Frequência
+  app.get("/api/turmas/:id/frequencia", autenticar, async (req, res) => {
+    const id = Number(req.params.id);
+    const data = req.query.data as string | undefined;
+    const result = await storage.getFrequenciaDaTurma(id, data);
+    res.json(result);
+  });
+
+  app.post("/api/turmas/:id/frequencia", autenticar, async (req, res) => {
+    const result = await storage.registrarFrequencia(req.body);
+    res.json(result);
+  });
+
   // Seed Admin User
   (async () => {
     const admin = await storage.getUsuarioPorEmail("admin@senai.br");

@@ -1,10 +1,11 @@
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 import {
-  usuarios, turmas, alunos, matriculas, avaliacoes, notas,
+  usuarios, turmas, alunos, matriculas, avaliacoes, notas, horarios, frequencia,
   type Usuario, type InsertUsuario, type Turma, type InsertTurma,
   type Aluno, type InsertAluno, type Avaliacao, type InsertAvaliacao,
-  type Nota, type InsertNota, type TurmaComDetalhes
+  type Nota, type InsertNota, type TurmaComDetalhes, type UnidadeCurricular, type InsertUnidadeCurricular,
+  type Horario, type InsertHorario, type Frequencia, type InsertFrequencia
 } from "@shared/schema";
 import session from "express-session";
 import MemoryStore from "memorystore";
@@ -46,6 +47,13 @@ export interface IStorage {
   // Notas
   atualizarNota(data: InsertNota): Promise<Nota>;
   getNotasDaTurma(turmaId: number): Promise<Nota[]>;
+
+  // Horários e Frequência
+  getHorariosDaTurma(turmaId: number): Promise<Horario[]>;
+  criarHorario(data: InsertHorario): Promise<Horario>;
+  excluirHorario(id: number): Promise<void>;
+  getFrequenciaDaTurma(turmaId: number, data?: string): Promise<Frequencia[]>;
+  registrarFrequencia(data: InsertFrequencia): Promise<Frequencia>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -187,6 +195,47 @@ export class DatabaseStorage implements IStorage {
     .where(eq(avaliacoes.turmaId, turmaId));
 
     return resultados.map(r => r.nota);
+  }
+
+  // Horários e Frequência
+  async getHorariosDaTurma(turmaId: number): Promise<Horario[]> {
+    return await db.select().from(horarios).where(eq(horarios.turmaId, turmaId));
+  }
+
+  async criarHorario(data: InsertHorario): Promise<Horario> {
+    const [h] = await db.insert(horarios).values(data).returning();
+    return h;
+  }
+
+  async excluirHorario(id: number): Promise<void> {
+    await db.delete(horarios).where(eq(horarios.id, id));
+  }
+
+  async getFrequenciaDaTurma(turmaId: number, data?: string): Promise<Frequencia[]> {
+    if (data) {
+      return await db.select().from(frequencia).where(and(eq(frequencia.turmaId, turmaId), eq(frequencia.data, data)));
+    }
+    return await db.select().from(frequencia).where(eq(frequencia.turmaId, turmaId));
+  }
+
+  async registrarFrequencia(data: InsertFrequencia): Promise<Frequencia> {
+    const [existe] = await db.select().from(frequencia)
+      .where(and(
+        eq(frequencia.turmaId, data.turmaId),
+        eq(frequencia.alunoId, data.alunoId),
+        eq(frequencia.data, data.data)
+      ));
+
+    if (existe) {
+      const [u] = await db.update(frequencia)
+        .set({ status: data.status })
+        .where(eq(frequencia.id, existe.id))
+        .returning();
+      return u;
+    } else {
+      const [n] = await db.insert(frequencia).values(data).returning();
+      return n;
+    }
   }
 }
 
