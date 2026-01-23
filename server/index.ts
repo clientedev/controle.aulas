@@ -74,7 +74,7 @@ app.use("/models", express.static(path.join(__dirname, "..", "public", "models")
 }));
 
 import { db } from "./db";
-import { migrate } from "drizzle-orm/postgres-js/migrator";
+import { usuarios } from "@shared/schema";
 
 (async () => {
   // Run database migrations on start for production/external DBs
@@ -116,6 +116,16 @@ import { migrate } from "drizzle-orm/postgres-js/migrator";
   // ALWAYS serve the app on the port specified in the environment variable PORT
   // Other ports are firewalled. Default to 5000 if not specified.
   const port = parseInt(process.env.PORT || "5000", 10);
+  
+  // Test database connection on start for debugging Railway
+  if (process.env.DATABASE_URL) {
+    db.select().from(usuarios).limit(1).then(() => {
+      console.log("Railway: Database connection successful.");
+    }).catch(err => {
+      console.error("Railway: Database connection FAILED. Check if tables exist and DATABASE_URL is correct:", err);
+    });
+  }
+
   httpServer.listen(
     {
       port,
