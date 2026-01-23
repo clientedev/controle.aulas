@@ -310,15 +310,15 @@ export async function registerRoutes(
   });
 
   // Critérios de Avaliação
-  app.get("/api/avaliacoes/:id/criterios", autenticar, async (req, res) => {
-    const id = Number(req.params.id);
-    const criterios = await storage.getCriteriosDaAvaliacao(id);
+  app.get("/api/unidades-curriculares/:id/criterios", autenticar, async (req, res) => {
+    const ucId = Number(req.params.id);
+    const criterios = await storage.getCriteriosDaUC(ucId);
     res.json(criterios);
   });
 
-  app.post("/api/avaliacoes/:id/criterios", autenticar, async (req, res) => {
-    const avaliacaoId = Number(req.params.id);
-    const criterios = req.body; // Array de critérios
+  app.post("/api/unidades-curriculares/:id/criterios", autenticar, async (req, res) => {
+    const ucId = Number(req.params.id);
+    const { criterios } = req.body;
     
     if (!Array.isArray(criterios)) {
       return res.status(400).json({ mensagem: "Formato inválido. Esperado um array de critérios." });
@@ -327,19 +327,26 @@ export async function registerRoutes(
     const criados = [];
     for (const item of criterios) {
       const criado = await storage.criarCriterio({
-        avaliacaoId,
+        unidadeCurricularId: ucId,
         descricao: item.descricao,
-        porcentagem: parseFloat(item.porcentagem)
+        peso: parseFloat(item.peso) || 1.0
       });
       criados.push(criado);
     }
-    res.status(201).json(criados);
+    res.json(criados);
   });
 
-  app.get("/api/avaliacoes/:avaliacaoId/alunos/:alunoId/atendimentos", autenticar, async (req, res) => {
-    const avaliacaoId = Number(req.params.avaliacaoId);
+  app.get("/api/unidades-curriculares/:ucId/alunos/:alunoId/aproveitamento", autenticar, async (req, res) => {
+    const ucId = Number(req.params.ucId);
     const alunoId = Number(req.params.alunoId);
-    const atendimentos = await storage.getCriteriosAtendidos(alunoId, avaliacaoId);
+    const nota = await storage.getNotaCriterio(alunoId, ucId);
+    res.json(nota);
+  });
+
+  app.get("/api/unidades-curriculares/:ucId/alunos/:alunoId/atendimentos", autenticar, async (req, res) => {
+    const ucId = Number(req.params.ucId);
+    const alunoId = Number(req.params.alunoId);
+    const atendimentos = await storage.getCriteriosAtendidosPorUC(alunoId, ucId);
     res.json(atendimentos);
   });
 

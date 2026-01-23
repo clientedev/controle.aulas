@@ -8,7 +8,8 @@ import {
   type Nota, type InsertNota, type TurmaComDetalhes, type UnidadeCurricular, type InsertUnidadeCurricular,
   type Horario, type InsertHorario, type Frequencia, type InsertFrequencia,
   type FotoAluno, type InsertFotoAluno, type CriterioAvaliacao, type InsertCriterioAvaliacao,
-  type CriterioAtendido, type InsertCriterioAtendido
+  type CriterioAtendido, type InsertCriterioAtendido,
+  type NotaCriterio, type InsertNotaCriterio
 } from "@shared/schema";
 import session from "express-session";
 import MemoryStore from "memorystore";
@@ -73,6 +74,12 @@ export interface IStorage {
   criarCriterio(data: InsertCriterioAvaliacao): Promise<CriterioAvaliacao>;
   getCriteriosAtendidos(alunoId: number, avaliacaoId: number): Promise<CriterioAtendido[]>;
   registrarCriterioAtendido(data: InsertCriterioAtendido): Promise<CriterioAtendido>;
+  
+  // Notas por Critérios
+  getCriteriosAtendidosPorUC(alunoId: number, ucId: number): Promise<CriterioAtendido[]>;
+  getNotaCriterio(alunoId: number, ucId: number): Promise<NotaCriterio | undefined>;
+  registrarNotaCriterio(data: InsertNotaCriterio): Promise<NotaCriterio>;
+  getCriteriosDaUC(ucId: number): Promise<CriterioAvaliacao[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -332,7 +339,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCriteriosDaAvaliacao(avaliacaoId: number): Promise<CriterioAvaliacao[]> {
-    return await db.select().from(criteriosAvaliacao).where(eq(criteriosAvaliacao.avaliacaoId, avaliacaoId));
+    // Esse método agora é legado mas mantido para compatibilidade se necessário
+    return [];
+  }
+
+  async getCriteriosDaUC(ucId: number): Promise<CriterioAvaliacao[]> {
+    return await db.select().from(criteriosAvaliacao).where(eq(criteriosAvaliacao.unidadeCurricularId, ucId));
   }
 
   async criarCriterio(data: InsertCriterioAvaliacao): Promise<CriterioAvaliacao> {
@@ -341,6 +353,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCriteriosAtendidos(alunoId: number, avaliacaoId: number): Promise<CriterioAtendido[]> {
+    // Legado
+    return [];
+  }
+
+  async getCriteriosAtendidosPorUC(alunoId: number, ucId: number): Promise<CriterioAtendido[]> {
     return await db.select({
       atendimento: criteriosAtendidos
     })
@@ -348,7 +365,7 @@ export class DatabaseStorage implements IStorage {
     .innerJoin(criteriosAvaliacao, eq(criteriosAtendidos.criterioId, criteriosAvaliacao.id))
     .where(and(
       eq(criteriosAtendidos.alunoId, alunoId),
-      eq(criteriosAvaliacao.avaliacaoId, avaliacaoId)
+      eq(criteriosAvaliacao.unidadeCurricularId, ucId)
     ))
     .then(res => res.map(r => r.atendimento));
   }
@@ -366,41 +383,71 @@ export class DatabaseStorage implements IStorage {
         .where(eq(criteriosAtendidos.id, existe.id))
         .returning();
       
-      // Recalcular nota do aluno para esta avaliação
-      await this.recalcularNotaAluno(data.alunoId, data.criterioId);
-      
+      await this.recalcularAproveitamento(data.alunoId, data.criterioId);
       return u;
     } else {
       const [n] = await db.insert(criteriosAtendidos).values(data).returning();
-      await this.recalcularNotaAluno(data.alunoId, data.criterioId);
+      await this.recalcularAproveitamento(data.alunoId, data.criterioId);
       return n;
     }
   }
 
-  private async recalcularNotaAluno(alunoId: number, criterioId: number) {
+  async getNotaCriterio(alunoId: number, ucId: number): Promise<NotaCriterio | undefined> {
+    const [nota] = await db.select().from(notasCriterios).where(and(
+      eq(notasCriterios.alunoId, alunoId),
+      eq(notasCriterios.unidadeCurricularId, ucId)
+    ));
+    return nota;
+  }
+
+  async registrarNotaCriterio(data: InsertNotaCriterio): Promise<NotaCriterio> {
+    const [existe] = await db.select().from(notasCriterios).where(and(
+      eq(notasCriterios.alunoId, data.alunoId),
+      eq(notasCriterios.unidadeCurricularId, data.unidadeCurricularId)
+    ));
+
+    if (existe) {
+      const [u] = await db.update(notasCriterios)
+        .set({ aproveitamento: data.aproveitamento })
+        .where(eq(notasCriterios.id, existe.id))
+        .returning();
+      return u;
+    } else {
+      const [n] = await db.insert(notasCriterios).values(data).returning();
+      return n;
+    }
+  }
+
+  private async recalcularAproveitamento(alunoId: number, criterioId: number) {
     const [criterio] = await db.select().from(criteriosAvaliacao).where(eq(criteriosAvaliacao.id, criterioId));
     if (!criterio) return;
 
-    const avaliacaoId = criterio.avaliacaoId;
-    const [avaliacao] = await db.select().from(avaliacoes).where(eq(avaliacoes.id, avaliacaoId));
-    if (!avaliacao) return;
+    const ucId = criterio.unidadeCurricularId;
+    const todosCriterios = await this.getCriteriosDaUC(ucId);
+    const atendidos = await this.getCriteriosAtendidosPorUC(alunoId, ucId);
 
-    const todosCriterios = await this.getCriteriosDaAvaliacao(avaliacaoId);
-    const atendidos = await this.getCriteriosAtendidos(alunoId, avaliacaoId);
+    let totalPeso = 0;
+    let pesoAtendido = 0;
 
-    let notaFinal = 0;
     for (const c of todosCriterios) {
+      totalPeso += c.peso;
       const atendimento = atendidos.find(a => a.criterioId === c.id);
       if (atendimento?.atendido === 1) {
-        notaFinal += (c.porcentagem / 100) * avaliacao.notaMaxima;
+        pesoAtendido += c.peso;
       }
     }
 
-    await this.atualizarNota({
+    const aproveitamento = totalPeso > 0 ? (pesoAtendido / totalPeso) : 0;
+
+    await this.registrarNotaCriterio({
       alunoId,
-      avaliacaoId,
-      valor: parseFloat(notaFinal.toFixed(2))
+      unidadeCurricularId: ucId,
+      aproveitamento
     });
+  }
+
+  private async recalcularNotaAluno(alunoId: number, criterioId: number) {
+    // Legado mantido para não quebrar interface se chamada
   }
 }
 
