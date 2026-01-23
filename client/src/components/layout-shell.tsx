@@ -8,7 +8,8 @@ import {
   Menu,
   School,
   GraduationCap,
-  Users
+  Users,
+  History
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -22,6 +23,7 @@ export function LayoutShell({ children }: { children: ReactNode }) {
     { href: "/", label: "Início", icon: LayoutDashboard },
     { href: "/students", label: "Alunos", icon: GraduationCap },
     { href: "/frequency", label: "Registro Frequência", icon: Users },
+    { href: "/historico-presenca", label: "Histórico", icon: History },
   ];
 
   if (user?.perfil === "admin") {

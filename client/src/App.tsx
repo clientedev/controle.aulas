@@ -12,6 +12,7 @@ import ClassDetails from "@/pages/class-details";
 import StudentsList from "@/pages/students-list";
 import StudentProfile from "@/pages/student-profile";
 import FrequencyRegistration from "@/pages/frequency-registration";
+import AttendanceHistory from "@/pages/attendance-history";
 import TabletLogin from "@/pages/tablet-login";
 import UsersPage from "@/pages/usuarios";
 import Login from "@/pages/login";
@@ -118,6 +119,9 @@ function Router() {
       </Route>
       <Route path="/frequency">
         {(params) => <ProtectedRoute component={FrequencyRegistration} path="/frequency" {...params} />}
+      </Route>
+      <Route path="/historico-presenca">
+        {(params) => <ProtectedRoute component={AttendanceHistory} path="/historico-presenca" {...params} />}
       </Route>
       <Route path="/usuarios">
         {(params) => <ProtectedRoute component={UsersPage} path="/usuarios" {...params} />}
