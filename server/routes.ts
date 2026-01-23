@@ -311,7 +311,7 @@ export async function registerRoutes(
         nome: "Totem Terminal",
         email: "totem@senai.br",
         senha: "senai-totem-123",
-        perfil: "professor" // Acesso básico necessário para as rotas
+        perfil: "totem"
       });
     }
   })();
