@@ -19,6 +19,9 @@ export default function FrequencyRegistration() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
 
+  const [descriptors, setDescriptors] = useState<{ alunoId: number; descriptor: Float32Array }[]>([]);
+  const [isProcessingModels, setIsProcessingModels] = useState(false);
+
   const { data: students } = useQuery<Aluno[]>({
     queryKey: ["/api/alunos"],
   });
@@ -35,8 +38,6 @@ export default function FrequencyRegistration() {
       try {
         console.log("Loading face-api models from:", MODEL_URL);
         
-        // face-api.js by default looks for -weights_manifest.json
-        // We ensure we are calling the nets correctly
         await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
         await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
         await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
@@ -46,17 +47,6 @@ export default function FrequencyRegistration() {
         setModelsLoaded(true);
       } catch (err: any) {
         console.error("Error loading models:", err);
-        // Fallback attempt with full path to json if standard loading fails
-        try {
-           console.log("Attempting fallback loading...");
-           // Some versions of face-api or server configs might need explicit paths or have mime-type issues
-           // But usually, standard loadFromUri is best if the files are named correctly.
-           // The error "Unexpected token <" usually means the server returned an HTML (404 page) instead of JSON.
-           // Let's check if the path /models/tiny_face_detector_model-weights_manifest.json is accessible.
-        } catch (fallbackErr) {
-           console.error("Fallback loading failed:", fallbackErr);
-        }
-
         toast({
           title: "Erro no Sistema",
           description: "Falha ao carregar modelos. Certifique-se que os arquivos .json estão na pasta public/models/",
@@ -66,6 +56,43 @@ export default function FrequencyRegistration() {
     };
     loadModels();
   }, []);
+
+  // Pre-process student descriptors once photos are loaded
+  useEffect(() => {
+    if (modelsLoaded && studentPhotos && studentPhotos.length > 0 && descriptors.length === 0) {
+      const processDescriptors = async () => {
+        setIsProcessingModels(true);
+        const loadedDescriptors: { alunoId: number; descriptor: Float32Array }[] = [];
+        
+        for (const photo of studentPhotos) {
+          try {
+            let studentImg: HTMLImageElement;
+            if (photo.fotoBase64) {
+              studentImg = await faceapi.fetchImage(photo.fotoBase64);
+            } else if (photo.objectPath) {
+              const url = `/api/uploads/url?objectPath=${encodeURIComponent(photo.objectPath)}`;
+              studentImg = await faceapi.fetchImage(url);
+            } else {
+              continue;
+            }
+
+            const detection = await faceapi.detectSingleFace(studentImg).withFaceLandmarks().withFaceDescriptor();
+            if (detection) {
+              loadedDescriptors.push({
+                alunoId: photo.alunoId,
+                descriptor: detection.descriptor
+              });
+            }
+          } catch (e) {
+            console.error("Error processing photo for descriptor", e);
+          }
+        }
+        setDescriptors(loadedDescriptors);
+        setIsProcessingModels(false);
+      };
+      processDescriptors();
+    }
+  }, [modelsLoaded, studentPhotos]);
 
   const startVideo = () => {
     setIsScanning(true);
@@ -85,7 +112,16 @@ export default function FrequencyRegistration() {
   };
 
   const handleCapture = async () => {
-    if (!videoRef.current || !canvasRef.current || !students || !studentPhotos) return;
+    if (!videoRef.current || !canvasRef.current || !students || descriptors.length === 0) {
+      if (descriptors.length === 0) {
+        toast({
+          title: "Aguarde",
+          description: "Ainda processando banco de dados de faces...",
+          variant: "destructive"
+        });
+      }
+      return;
+    }
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -99,12 +135,13 @@ export default function FrequencyRegistration() {
 
     toast({
       title: "Processando",
-      description: "Comparando face com banco de dados...",
+      description: "Identificando aluno...",
     });
 
     try {
       const input = await faceapi.fetchImage(base64Image);
-      const detection = await faceapi.detectSingleFace(input).withFaceLandmarks().withFaceDescriptor();
+      // Use TinyFaceDetector for faster detection on capture
+      const detection = await faceapi.detectSingleFace(input, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
 
       if (!detection) {
         toast({
@@ -115,41 +152,18 @@ export default function FrequencyRegistration() {
         return;
       }
 
-      // Load all labeled descriptors
-      // This is a simplified version. In a real app, descriptors should be pre-computed and stored.
-      // But for this requirement, we'll fetch photos and compute descriptors on the fly.
-      
       let bestMatch: { student: Aluno; distance: number } | null = null;
       let minDistance = 1.0;
 
-      for (const photo of studentPhotos) {
-        try {
-          let studentImg: HTMLImageElement;
-          
-          if (photo.fotoBase64) {
-            studentImg = await faceapi.fetchImage(photo.fotoBase64);
-          } else if (photo.objectPath) {
-            const url = `/api/uploads/url?objectPath=${encodeURIComponent(photo.objectPath)}`;
-            studentImg = await faceapi.fetchImage(url);
-          } else {
-            continue;
+      // Extremely fast comparison now that descriptors are pre-loaded
+      for (const item of descriptors) {
+        const distance = faceapi.euclideanDistance(detection.descriptor, item.descriptor);
+        if (distance < minDistance) {
+          minDistance = distance;
+          const student = students.find(s => s.id === item.alunoId);
+          if (student) {
+            bestMatch = { student, distance };
           }
-
-          const studentDetection = await faceapi.detectSingleFace(studentImg).withFaceLandmarks().withFaceDescriptor();
-          
-          if (studentDetection) {
-            const distance = faceapi.euclideanDistance(detection.descriptor, studentDetection.descriptor);
-            // distance < 0.3 means high similarity (1 - 0.3 = 70% match)
-            if (distance < minDistance) {
-              minDistance = distance;
-              const student = students.find(s => s.id === photo.alunoId);
-              if (student) {
-                bestMatch = { student, distance };
-              }
-            }
-          }
-        } catch (e) {
-          console.error("Error processing student photo", e);
         }
       }
 
@@ -170,7 +184,7 @@ export default function FrequencyRegistration() {
       } else {
         toast({
           title: "Não identificado",
-          description: "Compatibilidade abaixo de 70%.",
+          description: `Compatibilidade insuficiente (${matchPercentage.toFixed(1)}%).`,
           variant: "destructive",
         });
       }
@@ -245,10 +259,10 @@ export default function FrequencyRegistration() {
                 <canvas ref={canvasRef} className="hidden" />
               </div>
 
-              {!modelsLoaded ? (
+              {!modelsLoaded || isProcessingModels ? (
                 <Button disabled className="w-full">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Carregando modelos de IA...
+                  {isProcessingModels ? "Otimizando banco de faces..." : "Carregando modelos de IA..."}
                 </Button>
               ) : (
                 <div className="flex gap-2 w-full">
