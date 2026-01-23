@@ -68,6 +68,8 @@ export function PhotoGallery({ alunoId, alunoNome }: PhotoGalleryProps) {
   const handleOpenCamera = () => {
     setCameraOpen(true);
     setCapturedPhotos([]);
+    // Inicia a câmera assim que o diálogo abrir, sem depender do evento metadata se ele falhar
+    setTimeout(() => startCamera(), 100);
   };
 
   const handleCloseCamera = () => {
@@ -77,7 +79,10 @@ export function PhotoGallery({ alunoId, alunoNome }: PhotoGalleryProps) {
   };
 
   const capturePhoto = () => {
-    if (!videoRef.current) return;
+    if (!videoRef.current || videoRef.current.readyState < 2) {
+      toast({ title: "Câmera não está pronta", variant: "destructive" });
+      return;
+    }
 
     const canvas = document.createElement("canvas");
     canvas.width = videoRef.current.videoWidth;
@@ -224,7 +229,6 @@ export function PhotoGallery({ alunoId, alunoNome }: PhotoGalleryProps) {
                   autoPlay
                   playsInline
                   muted
-                  onLoadedMetadata={() => startCamera()}
                   className="w-full h-full object-contain"
                 />
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
