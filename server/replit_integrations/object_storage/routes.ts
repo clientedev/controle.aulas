@@ -65,14 +65,18 @@ export function registerObjectStorageRoutes(app: Express): void {
   /**
    * Serve uploaded objects.
    *
-   * GET /objects/:objectPath(*)
+   * GET /api/uploads/url?objectPath=...
    *
    * This serves files from object storage. For public files, no auth needed.
    * For protected files, add authentication middleware and ACL checks.
    */
-  app.get("/objects/:objectPath(*)", async (req, res) => {
+  app.get("/api/uploads/url", async (req, res) => {
     try {
-      const objectFile = await objectStorageService.getObjectEntityFile(req.path);
+      const objectPath = req.query.objectPath as string;
+      if (!objectPath) {
+        return res.status(400).json({ error: "Missing objectPath query parameter" });
+      }
+      const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
       await objectStorageService.downloadObject(objectFile, res);
     } catch (error) {
       console.error("Error serving object:", error);

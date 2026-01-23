@@ -59,7 +59,19 @@ The application uses session-based authentication stored in the database. Login 
 - **xlsx**: Excel file parsing for bulk student imports
 - **date-fns**: Date formatting with Portuguese locale support
 - **recharts**: Data visualization for grade analytics
-- **framer-motion**: Animations (listed in requirements but may need installation)
+- **@uppy/core** and **@uppy/react**: File upload management with dashboard modal
+- **@uppy/aws-s3**: S3-compatible upload for Replit Object Storage
+
+### Photo Gallery Feature (January 2026)
+The student profile page includes a photo gallery for facial recognition purposes:
+- **Database table**: `fotos_alunos` stores photo references linked to students
+- **Object Storage**: Photos stored in Replit App Storage with presigned URLs
+- **Camera Capture**: Multiple photo capture via webcam in browser
+- **API Endpoints**: 
+  - `GET /api/alunos/:id/fotos` - List student photos
+  - `POST /api/alunos/:id/fotos` - Add photo reference
+  - `DELETE /api/fotos/:id` - Remove photo
+  - `GET /api/uploads/url?objectPath=...` - Serve stored files
 
 ### Environment Variables Required
 - `DATABASE_URL` - PostgreSQL connection string
