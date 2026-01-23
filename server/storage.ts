@@ -333,7 +333,11 @@ export class DatabaseStorage implements IStorage {
 
     if (existe) {
       const [u] = await db.update(frequencia)
-        .set({ status: data.status })
+        .set({ 
+          status: data.status,
+          horario: data.horario || existe.horario,
+          metodo: data.metodo || existe.metodo
+        })
         .where(eq(frequencia.id, existe.id))
         .returning();
       return u;

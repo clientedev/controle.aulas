@@ -201,6 +201,9 @@ export default function FrequencyRegistration() {
 
       if (bestMatch && matchPercentage >= 70) {
         // Aluno identificado
+        setCapturedImage(base64Image);
+        stopVideo(); // Fecha a câmera imediatamente após o reconhecimento
+        
         setLastAutoCapture(Date.now());
         setRecognitionResult({ aluno: bestMatch.student, distance: minDistance });
         
@@ -217,12 +220,8 @@ export default function FrequencyRegistration() {
           metodo: "facial"
         });
 
-        // Reinicia a busca automática após um tempo para o próximo aluno
-        setTimeout(() => {
-          setRecognitionResult(null);
-          setCapturedImage(null);
-          if (!isScanning) startVideo();
-        }, 3000);
+        // NÃO reinicia a busca automática automaticamente para fechar a câmera
+        // O usuário precisará clicar em "Próximo Aluno"
       }
     } catch (err) {
       console.error(err);
