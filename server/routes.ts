@@ -304,6 +304,16 @@ export async function registerRoutes(
         perfil: "admin"
       });
     }
+    
+    const totem = await storage.getUsuarioPorEmail("totem@senai.br");
+    if (!totem) {
+      await storage.criarUsuario({
+        nome: "Totem Terminal",
+        email: "totem@senai.br",
+        senha: "senai-totem-123",
+        perfil: "professor" // Acesso básico necessário para as rotas
+      });
+    }
   })();
 
   return httpServer;

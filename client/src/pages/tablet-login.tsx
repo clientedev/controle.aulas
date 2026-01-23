@@ -5,21 +5,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, Keyboard } from "lucide-react";
+import { Loader2, Monitor, Lock } from "lucide-react";
 
 export default function TabletLogin() {
-  const [pin, setPin] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  const handleLogin = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (pin.length < 4) return;
-
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsLoading(true);
     try {
-      const res = await apiRequest("POST", "/api/auth/login-pin", { pin });
+      const res = await apiRequest("POST", "/api/auth/login", { 
+        email, 
+        senha: password 
+      });
+      
       if (res.ok) {
         toast({
           title: "Acesso Liberado",
@@ -29,7 +32,7 @@ export default function TabletLogin() {
       } else {
         toast({
           title: "Erro de Acesso",
-          description: "PIN de terminal incorreto.",
+          description: "Credenciais de totem incorretas.",
           variant: "destructive",
         });
       }
@@ -44,52 +47,67 @@ export default function TabletLogin() {
     }
   };
 
-  const addDigit = (digit: string) => {
-    if (pin.length < 6) setPin(prev => prev + digit);
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-6">
       <Card className="w-full max-w-md shadow-2xl border-2 border-primary/10 rounded-3xl overflow-hidden">
         <CardHeader className="bg-primary text-white p-8 text-center">
+          <Monitor className="h-12 w-12 mx-auto mb-4 opacity-80" />
           <CardTitle className="text-3xl font-bold font-display">Totem SENAI</CardTitle>
-          <p className="text-primary-foreground/80 mt-2">Acesso Restrito ao Terminal</p>
+          <p className="text-primary-foreground/80 mt-2">Login de Terminal</p>
         </CardHeader>
         <CardContent className="p-8">
-          <form onSubmit={handleLogin} className="space-y-8">
-            <div className="flex justify-center gap-3">
-              {[...Array(6)].map((_, i) => (
-                <div 
-                  key={i}
-                  className={`w-10 h-14 border-2 rounded-xl flex items-center justify-center text-2xl font-bold transition-all ${
-                    pin.length > i ? "border-primary bg-primary/5" : "border-muted bg-muted/20"
-                  }`}
-                >
-                  {pin.length > i ? "•" : ""}
-                </div>
-              ))}
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  E-mail do Totem
+                </label>
+                <Input 
+                  type="email"
+                  placeholder="ex: totem@senai.br"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-12 rounded-xl border-2"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Senha do Totem
+                </label>
+                <Input 
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-12 rounded-xl border-2"
+                  required
+                />
+              </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              {["1", "2", "3", "4", "5", "6", "7", "8", "9", "C", "0", "OK"].map((btn) => (
-                <Button
-                  key={btn}
-                  type="button"
-                  variant={btn === "OK" ? "default" : "outline"}
-                  className={`h-16 text-xl font-bold rounded-2xl ${
-                    btn === "OK" ? "bg-primary" : "hover:bg-primary/10"
-                  }`}
-                  onClick={() => {
-                    if (btn === "C") setPin("");
-                    else if (btn === "OK") handleLogin();
-                    else addDigit(btn);
-                  }}
-                  disabled={isLoading}
-                >
-                  {btn === "OK" ? <Keyboard className="h-6 w-6" /> : btn}
-                </Button>
-              ))}
-            </div>
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full h-14 text-lg font-bold rounded-xl shadow-lg hover:scale-[1.02] transition-transform"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Lock className="h-5 w-5" />
+                  Acessar Terminal
+                </div>
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 
             {isLoading && (
               <div className="flex justify-center">
