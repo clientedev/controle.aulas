@@ -11,6 +11,7 @@ import Dashboard from "@/pages/dashboard";
 import ClassDetails from "@/pages/class-details";
 import StudentsList from "@/pages/students-list";
 import StudentProfile from "@/pages/student-profile";
+import FrequencyRegistration from "@/pages/frequency-registration";
 import UsersPage from "@/pages/usuarios";
 import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
@@ -64,6 +65,9 @@ function Router() {
       </Route>
       <Route path="/students/:id">
         {(params) => <ProtectedRoute component={StudentProfile} path="/students/:id" {...params} />}
+      </Route>
+      <Route path="/frequency">
+        {(params) => <ProtectedRoute component={FrequencyRegistration} path="/frequency" {...params} />}
       </Route>
       <Route path="/usuarios">
         {(params) => <ProtectedRoute component={UsersPage} path="/usuarios" {...params} />}

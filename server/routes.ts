@@ -248,6 +248,16 @@ export async function registerRoutes(
   registerObjectStorageRoutes(app);
 
   // Fotos de Alunos
+  app.get("/api/all-student-photos", autenticar, async (req, res) => {
+    const alunos = await storage.getAlunos();
+    const todasFotos = [];
+    for (const aluno of alunos) {
+      const fotos = await storage.getFotosDoAluno(aluno.id);
+      todasFotos.push(...fotos.map(f => ({ ...f, studentName: aluno.nome })));
+    }
+    res.json(todasFotos);
+  });
+
   app.get("/api/alunos/:id/fotos", autenticar, async (req, res) => {
     const id = Number(req.params.id);
     const fotos = await storage.getFotosDoAluno(id);

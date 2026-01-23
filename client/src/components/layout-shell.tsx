@@ -21,6 +21,7 @@ export function LayoutShell({ children }: { children: ReactNode }) {
   const navItems = [
     { href: "/", label: "Início", icon: LayoutDashboard },
     { href: "/students", label: "Alunos", icon: GraduationCap },
+    { href: "/frequency", label: "Registro Frequência", icon: Users },
   ];
 
   if (user?.perfil === "admin") {
