@@ -252,8 +252,9 @@ export default function FrequencyRegistration() {
   const registerPresenceMutation = useMutation({
     mutationFn: async (data: { alunoId: number; status: number; horario?: string; data?: string; metodo?: string }) => {
       // Find a class for this student to register presence
-      const studentClasses = await apiRequest("GET", `/api/alunos/${data.alunoId}`);
-      const studentData = await studentClasses.json();
+      const res = await fetch(`/api/alunos/${data.alunoId}`);
+      if (!res.ok) throw new Error("Erro ao buscar dados do aluno");
+      const studentData = await res.json();
       
       if (studentData.turmas && studentData.turmas.length > 0) {
         const today = data.data || new Date().toISOString().split('T')[0];

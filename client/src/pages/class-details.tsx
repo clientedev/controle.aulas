@@ -1103,6 +1103,7 @@ function AttendanceTab({ classId, students }: { classId: number, students: any[]
     queryKey: ["/api/turmas", classId, "frequencia", { data }],
     queryFn: async () => {
       const res = await fetch(`/api/turmas/${classId}/frequencia?data=${data}`);
+      if (!res.ok) return [];
       return res.json();
     }
   });
