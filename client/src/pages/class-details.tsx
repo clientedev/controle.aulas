@@ -586,6 +586,14 @@ function UnidadesTab({ classId, unidades }: { classId: number, unidades: any[] }
     reader.readAsBinaryString(file);
   };
 
+  const downloadTemplate = () => {
+    const data = [{ Descricao: "Critério de exemplo 1", Peso: 1.0 }, { Descricao: "Critério de exemplo 2", Peso: 0.5 }];
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Modelo");
+    XLSX.writeFile(wb, "modelo_criterios.xlsx");
+  };
+
   return (
     <div className="space-y-4">
       <Card>
@@ -594,26 +602,32 @@ function UnidadesTab({ classId, unidades }: { classId: number, unidades: any[] }
             <CardTitle>Unidades Curriculares</CardTitle>
             <CardDescription>Matérias associadas a esta turma</CardDescription>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Nova Unidade
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>Nova Unidade Curricular</DialogTitle></DialogHeader>
-              <div className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label>Nome da Unidade</Label>
-                  <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Metodologia Ágil" />
-                </div>
-                <Button className="w-full" onClick={handleCreate} disabled={createMutation.isPending}>
-                  {createMutation.isPending ? "Criando..." : "Criar Unidade"}
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={downloadTemplate}>
+              <Download className="mr-2 h-4 w-4" />
+              Modelo Excel
+            </Button>
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nova Unidade
                 </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Nova Unidade Curricular</DialogTitle></DialogHeader>
+                <div className="space-y-4 pt-4">
+                  <div className="space-y-2">
+                    <Label>Nome da Unidade</Label>
+                    <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Metodologia Ágil" />
+                  </div>
+                  <Button className="w-full" onClick={handleCreate} disabled={createMutation.isPending}>
+                    {createMutation.isPending ? "Criando..." : "Criar Unidade"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
