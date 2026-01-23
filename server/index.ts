@@ -5,8 +5,17 @@ import { createServer } from "http";
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+let __filename: string;
+let __dirname: string;
+
+try {
+  __filename = fileURLToPath(import.meta.url);
+  __dirname = dirname(__filename);
+} catch (e) {
+  // Fallback for CJS/dist environments where import.meta.url might be undefined
+  __filename = "";
+  __dirname = process.cwd();
+}
 
 const app = express();
 const httpServer = createServer(app);

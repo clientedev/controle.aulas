@@ -1,0 +1,106 @@
+Starting Container
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 db:push:force
+> drizzle-kit push --force
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/app/drizzle.config.ts'
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 prestart
+> npm run db:push:force
+Using 'pg' driver for database querying
+[✓] Changes applied
+[⣷] Pulling schema from database...
+[✓] Pulling schema from database...
+> rest-express@1.0.0 start
+> NODE_ENV=production node dist/index.cjs
+}
+TypeError [ERR_INVALID_ARG_TYPE]: The "path" argument must be of type string or an instance of URL. Received undefined
+Node.js v22.22.0
+    at fileURLToPath (node:internal/url:1610:11)
+    at Object.<anonymous> (/app/dist/index.cjs:95:124937)
+    at Module._compile (node:internal/modules/cjs/loader:1706:14)
+    at Object..js (node:internal/modules/cjs/loader:1839:10)
+node:internal/url:1610
+    at Module.load (node:internal/modules/cjs/loader:1441:32)
+    throw new ERR_INVALID_ARG_TYPE('path', ['string', 'URL'], path);
+    at Function._load (node:internal/modules/cjs/loader:1263:12)
+    ^
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+    at node:internal/main/run_main_module:36:49 {
+  code: 'ERR_INVALID_ARG_TYPE'
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 prestart
+> npm run db:push:force
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 db:push:force
+> drizzle-kit push --force
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/app/drizzle.config.ts'
+Using 'pg' driver for database querying
+[⣷] Pulling schema from database...
+[⡿] Pulling schema from database...
+[⢿] Pulling schema from database...
+[⣯] Pulling schema from database...
+[⣟] Pulling schema from database...
+[✓] Pulling schema from database...
+[i] No changes detected
+> rest-express@1.0.0 start
+> NODE_ENV=production node dist/index.cjs
+    at node:internal/main/run_main_module:36:49 {
+  code: 'ERR_INVALID_ARG_TYPE'
+}
+Node.js v22.22.0
+node:internal/url:1610
+    throw new ERR_INVALID_ARG_TYPE('path', ['string', 'URL'], path);
+    ^
+TypeError [ERR_INVALID_ARG_TYPE]: The "path" argument must be of type string or an instance of URL. Received undefined
+    at fileURLToPath (node:internal/url:1610:11)
+    at Object.<anonymous> (/app/dist/index.cjs:95:124937)
+    at Module._compile (node:internal/modules/cjs/loader:1706:14)
+    at Object..js (node:internal/modules/cjs/loader:1839:10)
+    at Module.load (node:internal/modules/cjs/loader:1441:32)
+    at Function._load (node:internal/modules/cjs/loader:1263:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 prestart
+> npm run db:push:force
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 db:push:force
+> drizzle-kit push --force
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/app/drizzle.config.ts'
+Using 'pg' driver for database querying
+[⣷] Pulling schema from database...
+[⣯] Pulling schema from database...
+[⣟] Pulling schema from database...
+[⡿] Pulling schema from database...
+[⢿] Pulling schema from database...
+[✓] Pulling schema from database...
+[i] No changes detected
+> rest-express@1.0.0 start
+> NODE_ENV=production node dist/index.cjs
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+    at node:internal/main/run_main_module:36:49 {
+  code: 'ERR_INVALID_ARG_TYPE'
+}
+node:internal/url:1610
+    throw new ERR_INVALID_ARG_TYPE('path', ['string', 'URL'], path);
+Node.js v22.22.0
+    ^
+TypeError [ERR_INVALID_ARG_TYPE]: The "path" argument must be of type string or an instance of URL. Received undefined
+    at fileURLToPath (node:internal/url:1610:11)
+    at Object.<anonymous> (/app/dist/index.cjs:95:124937)
+    at Module._compile (node:internal/modules/cjs/loader:1706:14)
+    at Object..js (node:internal/modules/cjs/loader:1839:10)
+    at Module.load (node:internal/modules/cjs/loader:1441:32)
+    at Function._load (node:internal/modules/cjs/loader:1263:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 prestart
+> npm run db:push:force
+npm warn config production Use `--omit=dev` instead.
