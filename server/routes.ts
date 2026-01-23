@@ -45,6 +45,19 @@ export async function registerRoutes(
     res.json(usuario);
   });
 
+  app.post("/api/auth/login-pin", async (req, res) => {
+    const { pin } = req.body;
+    if (!pin) return res.status(400).json({ mensagem: "PIN obrigatório" });
+    
+    const usuario = await storage.getUsuarioPorPin(pin);
+    if (!usuario) {
+      return res.status(401).json({ mensagem: "PIN inválido" });
+    }
+
+    (req.session as any).usuarioId = usuario.id;
+    res.json(usuario);
+  });
+
   app.post(api.auth.logout.path, (req, res) => {
     req.session.destroy((err) => {
       if (err) return res.status(500).json({ mensagem: "Erro ao sair" });

@@ -20,6 +20,7 @@ export interface IStorage {
   // Usuários / Auth
   getUsuario(id: number): Promise<Usuario | undefined>;
   getUsuarioPorEmail(email: string): Promise<Usuario | undefined>;
+  getUsuarioPorPin(pin: string): Promise<Usuario | undefined>;
   criarUsuario(data: InsertUsuario): Promise<Usuario>;
   getUsuarios(): Promise<Usuario[]>;
   getTodasTurmas(): Promise<Turma[]>;
@@ -74,6 +75,11 @@ export class DatabaseStorage implements IStorage {
 
   async getUsuarioPorEmail(email: string): Promise<Usuario | undefined> {
     const [user] = await db.select().from(usuarios).where(eq(usuarios.email, email));
+    return user;
+  }
+
+  async getUsuarioPorPin(pin: string): Promise<Usuario | undefined> {
+    const [user] = await db.select().from(usuarios).where(eq(usuarios.pinRegistro, pin));
     return user;
   }
 

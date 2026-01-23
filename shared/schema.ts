@@ -10,6 +10,7 @@ export const usuarios = pgTable("usuarios", {
   nome: text("nome").notNull(),
   email: text("email").unique().notNull(),
   senha: text("senha").notNull(),
+  pinRegistro: text("pin_registro"), // PIN para login rápido em tablet
   perfil: text("perfil").notNull().default("professor"), // "professor" ou "admin"
   criadoEm: timestamp("criado_em").defaultNow(),
 });
