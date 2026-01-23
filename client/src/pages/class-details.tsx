@@ -1108,8 +1108,7 @@ function AttendanceTab({ classId, students }: { classId: number, students: any[]
       if (!res.ok) return [];
       const result = await res.json();
       return Array.isArray(result) ? result : [];
-    },
-    refetchInterval: 5000, // Atualiza a cada 5 segundos para capturar registros do totem
+    }
   });
 
   const mutation = useMutation({
@@ -1119,10 +1118,12 @@ function AttendanceTab({ classId, students }: { classId: number, students: any[]
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      if (!res.ok) throw new Error("Erro ao registrar frequência");
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/turmas", classId, "frequencia"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/attendance-history"] });
       refetch();
     }
   });

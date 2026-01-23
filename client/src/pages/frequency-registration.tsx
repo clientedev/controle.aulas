@@ -271,16 +271,37 @@ export default function FrequencyRegistration() {
         title: "Presença registrada",
         description: "A frequência foi salva com sucesso.",
       });
-      // Invalidate specific attendance queries to ensure UI updates
+      
+      // Force immediate invalidation across the app
       queryClient.invalidateQueries({ queryKey: ["/api/turmas"] });
       queryClient.invalidateQueries({ queryKey: ["/api/attendance-history"] });
       
-      // Invalidate the generic frequency key to catch all class-details tabs
-      queryClient.invalidateQueries({ queryKey: ["/api/turmas", "frequencia"] });
-      
-      // Try to invalidate the specific frequency query if we have the student's data
+      // IMPORTANT: This invalidates the specific query used in class-details.tsx
       const today = variables.data || new Date().toISOString().split('T')[0];
-      console.log("Invalidating frequency for date:", today);
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/turmas", variables.turmaId, "frequencia"] 
+      });
+      
+      console.log("Totem: Sucesso no registro. Limpando estado em 3 segundos...");
+      setTimeout(() => {
+        setCapturedImage(null);
+        setRecognitionResult(null);
+        startVideo();
+      }, 3000);
+    },
+    onError: (error: any) => {
+      console.error("Totem: Erro ao registrar:", error);
+      toast({
+        title: "Erro no registro",
+        description: "Não foi possível salvar a presença no banco de dados.",
+        variant: "destructive"
+      });
+      // Permite tentar novamente após erro
+      setTimeout(() => {
+        setCapturedImage(null);
+        setRecognitionResult(null);
+        startVideo();
+      }, 3000);
     }
   });
 

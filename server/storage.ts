@@ -324,11 +324,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async registrarFrequencia(data: InsertFrequencia): Promise<Frequencia> {
+    const today = data.data;
     const [existe] = await db.select().from(frequencia)
       .where(and(
         eq(frequencia.turmaId, data.turmaId),
         eq(frequencia.alunoId, data.alunoId),
-        eq(frequencia.data, data.data)
+        eq(frequencia.data, today)
       ));
 
     if (existe) {
