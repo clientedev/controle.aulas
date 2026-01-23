@@ -168,7 +168,6 @@ export default function ClassDetails() {
             <GradesTab 
               classId={classId} 
               students={classData.alunos || []} 
-              evaluations={classData.avaliacoes || []} 
             />
           </TabsContent>
         </Tabs>
@@ -184,7 +183,6 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
   
   const createOneMutation = useMutation({
     mutationFn: async (data: any) => {
-      // Se não tiver matrícula, gera uma
       if (!data.matricula) {
         data.matricula = "ALU" + Math.random().toString(36).substr(2, 6).toUpperCase();
       }
@@ -275,6 +273,7 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
     reader.onload = async (evt) => {
       try {
         const bstr = evt.target?.result;
+        if (typeof bstr !== 'string') return;
         const wb = XLSX.read(bstr, { type: "binary" });
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
@@ -530,7 +529,10 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
 function UnidadesTab({ classId, unidades }: { classId: number, unidades: any[] }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [nome, setNome] = useState("");
+  const [selectedUC, setSelectedUC] = useState<any>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const createMutation = useCreateUnidadeCurricular(classId);
+  const { toast } = useToast();
 
   const handleCreate = () => {
     if (nome) {
@@ -543,50 +545,77 @@ function UnidadesTab({ classId, unidades }: { classId: number, unidades: any[] }
     }
   };
 
+  const handleExcelImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedUC) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        if (typeof bstr !== 'string') return;
+        const wb = XLSX.read(bstr, { type: "binary" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(ws) as any[];
+
+        const criterios = data.map(row => ({
+          descricao: row.Descricao || row.descricao || row.Criterio || row.criterio,
+          peso: parseFloat(row.Peso || row.peso) || 1.0
+        })).filter(c => c.descricao);
+
+        if (criterios.length === 0) {
+          toast({ title: "Erro", description: "Nenhum critério válido encontrado.", variant: "destructive" });
+          return;
+        }
+
+        const res = await fetch(`/api/unidades-curriculares/${selectedUC.id}/criterios`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ criterios }),
+        });
+
+        if (!res.ok) throw new Error("Erro ao importar critérios");
+
+        toast({ title: "Sucesso", description: `${criterios.length} critérios importados.` });
+        setImportDialogOpen(false);
+        queryClient.invalidateQueries({ queryKey: ["/api/turmas", classId] });
+      } catch (err) {
+        toast({ title: "Erro", description: "Falha ao processar Excel", variant: "destructive" });
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <div className="space-y-1">
-          <CardTitle>Unidades Curriculares</CardTitle>
-          <CardDescription>Matérias associadas a esta turma</CardDescription>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Adicionar Unidade
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Nova Unidade Curricular</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label htmlFor="uc-nome">Nome da Unidade</Label>
-                <Input 
-                  id="uc-nome" 
-                  placeholder="ex: Lógica de Programação" 
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                />
-              </div>
-              <DialogFooter>
-                <Button onClick={handleCreate} disabled={!nome || createMutation.isPending}>
-                  {createMutation.isPending ? "Criando..." : "Criar"}
-                </Button>
-              </DialogFooter>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </CardHeader>
-      <CardContent>
-        {unidades.length === 0 ? (
-          <div className="flex h-40 flex-col items-center justify-center text-center text-muted-foreground border-2 border-dashed rounded-xl">
-            <BookOpen className="h-8 w-8 mb-2 opacity-50" />
-            <p>Nenhuma unidade curricular criada ainda</p>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <div className="space-y-1">
+            <CardTitle>Unidades Curriculares</CardTitle>
+            <CardDescription>Matérias associadas a esta turma</CardDescription>
           </div>
-        ) : (
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Nova Unidade
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Nova Unidade Curricular</DialogTitle></DialogHeader>
+              <div className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <Label>Nome da Unidade</Label>
+                  <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Metodologia Ágil" />
+                </div>
+                <Button className="w-full" onClick={handleCreate} disabled={createMutation.isPending}>
+                  {createMutation.isPending ? "Criando..." : "Criar Unidade"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </CardHeader>
+        <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
@@ -599,65 +628,249 @@ function UnidadesTab({ classId, unidades }: { classId: number, unidades: any[] }
                 <TableRow key={uc.id}>
                   <TableCell className="font-medium">{uc.nome}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <MoreHorizontal className="h-4 w-4" />
+                    <Button variant="outline" size="sm" onClick={() => { setSelectedUC(uc); setImportDialogOpen(true); }}>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Critérios (Excel)
                     </Button>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        )}
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Importar Critérios - {selectedUC?.nome}</DialogTitle>
+            <DialogDescription>Suba um Excel com colunas: Descricao, Peso (opcional)</DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-10 mt-4 cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => document.getElementById("excel-uc-import")?.click()}>
+            <Upload className="h-10 w-10 mb-2 text-muted-foreground" />
+            <span className="text-sm font-medium">Clique para selecionar o arquivo</span>
+            <input id="excel-uc-import" type="file" className="hidden" accept=".xlsx,.xls" onChange={handleExcelImport} />
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function StudentAproveitamentoBadge({ ucId, alunoId }: { ucId: number, alunoId: number }) {
+  const { data: aproveitamento } = useQuery<any>({
+    queryKey: ["/api/unidades-curriculares", ucId, "alunos", alunoId, "aproveitamento"],
+    queryFn: async () => {
+      const res = await fetch(`/api/unidades-curriculares/${ucId}/alunos/${alunoId}/aproveitamento`);
+      if (res.status === 404 || !res.ok) return null;
+      return res.json();
+    }
+  });
+
+  if (!aproveitamento) return <Badge variant="secondary">N/A</Badge>;
+  
+  const perc = Math.round(aproveitamento.aproveitamento * 100);
+  let variant: "default" | "destructive" | "outline" | "secondary" = "default";
+  if (perc < 50) variant = "destructive";
+  else if (perc < 75) variant = "secondary";
+
+  return <Badge variant={variant}>{perc}%</Badge>;
+}
+
+function GradesTab({ classId, students }: { classId: number, students: any[] }) {
+  const { data: classData } = useClass(classId);
+  const unidades = classData?.unidadesCurriculares || [];
+  const [selectedUC, setSelectedUC] = useState<any>(null);
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [evalDialogOpen, setEvalDialogOpen] = useState(false);
+  const { toast } = useToast();
+
+  const { data: criterios } = useQuery<any[]>({
+    queryKey: ["/api/unidades-curriculares", selectedUC?.id, "criterios"],
+    queryFn: async () => {
+      if (!selectedUC) return [];
+      const res = await fetch(`/api/unidades-curriculares/${selectedUC.id}/criterios`);
+      return res.json();
+    },
+    enabled: !!selectedUC
+  });
+
+  const { data: atendimentos, refetch: refetchAtendimentos } = useQuery<any[]>({
+    queryKey: ["/api/unidades-curriculares", selectedUC?.id, "alunos", selectedStudent?.id, "atendimentos"],
+    queryFn: async () => {
+      if (!selectedUC || !selectedStudent) return [];
+      const res = await fetch(`/api/unidades-curriculares/${selectedUC.id}/alunos/${selectedStudent.id}/atendimentos`);
+      return res.json();
+    },
+    enabled: !!selectedUC && !!selectedStudent
+  });
+
+  const { data: aproveitamento, refetch: refetchAproveitamento } = useQuery<any>({
+    queryKey: ["/api/unidades-curriculares", selectedUC?.id, "alunos", selectedStudent?.id, "aproveitamento"],
+    queryFn: async () => {
+      if (!selectedUC || !selectedStudent) return null;
+      const res = await fetch(`/api/unidades-curriculares/${selectedUC.id}/alunos/${selectedStudent.id}/aproveitamento`);
+      return res.json();
+    },
+    enabled: !!selectedUC && !!selectedStudent
+  });
+
+  const toggleCriterio = useMutation({
+    mutationFn: async ({ criterioId, atendido }: any) => {
+      const res = await fetch("/api/atendimentos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alunoId: selectedStudent.id, criterioId, atendido }),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      refetchAtendimentos();
+      refetchAproveitamento();
+    }
+  });
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Avaliação por Critérios</CardTitle>
+          <CardDescription>Selecione uma Unidade Curricular para avaliar os alunos</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-4 mb-6">
+            <Select onValueChange={(val) => setSelectedUC(unidades.find((u: any) => u.id === Number(val)))}>
+              <SelectTrigger className="w-[300px]">
+                <SelectValue placeholder="Selecione a Unidade Curricular" />
+              </SelectTrigger>
+              <SelectContent>
+                {unidades.map((uc: any) => (
+                  <SelectItem key={uc.id} value={uc.id.toString()}>{uc.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedUC && (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Aluno</TableHead>
+                  <TableHead>Aproveitamento</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {students.map((student) => (
+                  <TableRow key={student.id}>
+                    <TableCell className="font-medium">{student.nome}</TableCell>
+                    <TableCell>
+                      <StudentAproveitamentoBadge ucId={selectedUC.id} alunoId={student.id} />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="outline" size="sm" onClick={() => { setSelectedStudent(student); setEvalDialogOpen(true); }}>
+                        <Check className="mr-2 h-4 w-4" />
+                        Avaliar
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={evalDialogOpen} onOpenChange={setEvalDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Avaliação: {selectedStudent?.nome}</DialogTitle>
+            <DialogDescription>{selectedUC?.nome} - Critérios de Avaliação</DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {criterios?.length === 0 && <p className="text-center text-muted-foreground py-8">Nenhum critério cadastrado para esta unidade.</p>}
+            
+            {criterios?.map((c: any) => {
+              const atendido = atendimentos?.some((a: any) => a.criterioId === c.id && a.atendido === 1);
+              return (
+                <div key={c.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                  <div className="space-y-1">
+                    <p className="font-medium">{c.descricao}</p>
+                    <p className="text-xs text-muted-foreground">Peso: {c.peso}</p>
+                  </div>
+                  <Button 
+                    variant={atendido ? "default" : "outline"}
+                    size="sm"
+                    className={atendido ? "bg-green-600 hover:bg-green-700" : ""}
+                    onClick={() => toggleCriterio.mutate({ criterioId: c.id, atendido: atendido ? 0 : 1 })}
+                  >
+                    {atendido ? <Check className="h-4 w-4 mr-1" /> : <Minus className="h-4 w-4 mr-1" />}
+                    {atendido ? "Atingido" : "Não Atingido"}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="border-t pt-4 flex justify-between items-center">
+            <div className="text-lg font-bold">
+              Aproveitamento Final: {aproveitamento ? Math.round(aproveitamento.aproveitamento * 100) : 0}%
+            </div>
+            <Button onClick={() => setEvalDialogOpen(false)}>Fechar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
 
 function EvaluationsTab({ evaluations, unidades, classId }: { evaluations: any[], unidades: any[], classId: number }) {
   const [dialogOpen, setDialogOpen] = useState(false);
-  
+  const { toast } = useToast();
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      const { unidadeCurricularId, ...rest } = data;
-      const res = await fetch(`/api/unidades-curriculares/${unidadeCurricularId}/avaliacoes`, {
+      const res = await fetch(`/api/unidades-curriculares/${data.unidadeCurricularId}/avaliacoes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(rest),
+        body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error("Erro ao criar avaliação");
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.turmas.obter.path, { id: classId }] });
+      queryClient.invalidateQueries({ queryKey: ["/api/turmas", classId] });
+      setDialogOpen(false);
+      form.reset();
     }
   });
-  
+
   const form = useForm({
     resolver: zodResolver(createEvaluationSchema),
-    defaultValues: { nome: "", notaMaxima: "10", peso: "1", unidadeCurricularId: "" }
+    defaultValues: {
+      unidadeCurricularId: "",
+      nome: "",
+      notaMaxima: "10",
+      peso: "1",
+    }
   });
 
   const onSubmit = (data: any) => {
-    createMutation.mutate(data, {
-      onSuccess: () => {
-        setDialogOpen(false);
-        form.reset();
-      }
-    });
+    createMutation.mutate(data);
   };
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div className="space-y-1">
-          <CardTitle>Avaliações</CardTitle>
-          <CardDescription>Provas, trabalhos e projetos</CardDescription>
+          <CardTitle>Avaliações Agendadas</CardTitle>
+          <CardDescription>Crie e gerencie as avaliações desta turma</CardDescription>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button disabled={unidades.length === 0}>
+            <Button>
               <Plus className="mr-2 h-4 w-4" />
-              Adicionar Avaliação
+              Nova Avaliação
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -674,13 +887,11 @@ function EvaluationsTab({ evaluations, unidades, classId }: { evaluations: any[]
                       <FormLabel>Unidade Curricular</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione a unidade" />
-                          </SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {unidades.map(uc => (
-                            <SelectItem key={uc.id} value={uc.id.toString()}>{uc.nome}</SelectItem>
+                          {unidades.map(u => (
+                            <SelectItem key={u.id} value={u.id.toString()}>{u.nome}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -694,7 +905,7 @@ function EvaluationsTab({ evaluations, unidades, classId }: { evaluations: any[]
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Nome da Avaliação</FormLabel>
-                      <FormControl><Input placeholder="Prova 1" {...field} /></FormControl>
+                      <FormControl><Input placeholder="P1, Projeto Final..." {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -706,7 +917,7 @@ function EvaluationsTab({ evaluations, unidades, classId }: { evaluations: any[]
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Nota Máxima</FormLabel>
-                        <FormControl><Input type="number" step="0.1" {...field} /></FormControl>
+                        <FormControl><Input type="number" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -717,7 +928,7 @@ function EvaluationsTab({ evaluations, unidades, classId }: { evaluations: any[]
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Peso</FormLabel>
-                        <FormControl><Input type="number" step="0.1" {...field} /></FormControl>
+                        <FormControl><Input type="number" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -735,36 +946,29 @@ function EvaluationsTab({ evaluations, unidades, classId }: { evaluations: any[]
         {evaluations.length === 0 ? (
           <div className="flex h-40 flex-col items-center justify-center text-center text-muted-foreground border-2 border-dashed rounded-xl">
             <FileText className="h-8 w-8 mb-2 opacity-50" />
-            <p>Nenhuma avaliação criada ainda</p>
+            <p>Nenhuma avaliação cadastrada</p>
           </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nome</TableHead>
                 <TableHead>Unidade</TableHead>
-                <TableHead>Nota Máx.</TableHead>
-                <TableHead>Peso</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
+                <TableHead>Nome</TableHead>
+                <TableHead className="text-center">Nota Máxima</TableHead>
+                <TableHead className="text-center">Peso</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {evaluations.map((eval_item) => {
-                const uc = unidades.find(u => u.id === eval_item.unidadeCurricularId);
-                return (
-                  <TableRow key={eval_item.id}>
-                    <TableCell className="font-medium">{eval_item.nome}</TableCell>
-                    <TableCell>{uc?.nome || "-"}</TableCell>
-                    <TableCell>{eval_item.notaMaxima}</TableCell>
-                    <TableCell>{eval_item.peso}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+              {evaluations.map((evalu) => (
+                <TableRow key={evalu.id}>
+                  <TableCell className="font-medium">
+                    {unidades.find(u => u.id === evalu.unidadeCurricularId)?.nome}
+                  </TableCell>
+                  <TableCell>{evalu.nome}</TableCell>
+                  <TableCell className="text-center">{evalu.notaMaxima}</TableCell>
+                  <TableCell className="text-center">{evalu.peso}</TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         )}
@@ -774,308 +978,89 @@ function EvaluationsTab({ evaluations, unidades, classId }: { evaluations: any[]
 }
 
 function AttendanceTab({ classId, students }: { classId: number, students: any[] }) {
-  const [date, setDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
-  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
-  
-  const { data: schedule } = useQuery<any[]>({
-    queryKey: ["/api/turmas", classId, "horarios"],
+  const [data, setData] = useState(format(new Date(), "yyyy-MM-dd"));
+  const { data: attendanceData, refetch } = useQuery<any[]>({
+    queryKey: ["/api/turmas", classId, "frequencia", { data }],
     queryFn: async () => {
-      const res = await fetch(`/api/turmas/${classId}/horarios`);
+      const res = await fetch(`/api/turmas/${classId}/frequencia?data=${data}`);
       return res.json();
     }
   });
 
-  const { data: attendanceData, refetch: refetchAttendance } = useQuery<any[]>({
-    queryKey: ["/api/turmas", classId, "frequencia", date],
-    queryFn: async () => {
-      const res = await fetch(`/api/turmas/${classId}/frequencia?data=${date}`);
-      return res.json();
-    }
-  });
-
-  const registerMutation = useMutation({
-    mutationFn: async (data: any) => {
+  const mutation = useMutation({
+    mutationFn: async (payload: any) => {
       const res = await fetch(`/api/turmas/${classId}/frequencia`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
       return res.json();
     },
-    onSuccess: () => refetchAttendance()
+    onSuccess: () => refetch()
   });
 
-  const createScheduleMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const res = await fetch(`/api/turmas/${classId}/horarios`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/turmas", classId, "horarios"] });
-      setShowScheduleDialog(false);
-    }
-  });
-
-  const deleteScheduleMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await fetch(`/api/horarios/${id}`, { method: "DELETE" });
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/turmas", classId, "horarios"] })
-  });
-
-  const daysOfWeek = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
-
-  const getStatus = (studentId: number) => {
-    return attendanceData?.find(a => a.alunoId === studentId)?.status;
-  };
-
-  const handleStatusChange = (studentId: number, status: string) => {
-    registerMutation.mutate({
-      alunoId: studentId,
+  const toggleAttendance = (alunoId: number, currentStatus: number) => {
+    mutation.mutate({
       turmaId: classId,
-      data: date,
-      status
+      alunoId,
+      data,
+      status: currentStatus === 1 ? 0 : 1
     });
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-4">
-          <Input 
-            type="date" 
-            value={date} 
-            onChange={(e) => setDate(e.target.value)} 
-            className="w-48"
-          />
-          <Badge variant="outline" className="h-9 px-3">
-            {format(new Date(date + "T00:00:00"), "EEEE, d 'de' MMMM", { locale: ptBR })}
-          </Badge>
-        </div>
-        <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
-          <DialogTrigger asChild>
-            <Button variant="outline">
-              <Clock className="mr-2 h-4 w-4" />
-              Configurar Horários
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Horários da Turma</DialogTitle>
-              <DialogDescription>Defina os dias e horários das aulas</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 pt-4">
-              <div className="space-y-4">
-                {schedule?.map((h) => (
-                  <div key={h.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
-                    <div>
-                      <span className="font-semibold">{daysOfWeek[h.diaSemana]}</span>
-                      <p className="text-sm text-muted-foreground">{h.horarioInicio} - {h.horarioFim}</p>
-                    </div>
-                    <Button variant="ghost" size="icon" onClick={() => deleteScheduleMutation.mutate(h.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                const formData = new FormData(e.currentTarget);
-                createScheduleMutation.mutate({
-                  diaSemana: Number(formData.get("diaSemana")),
-                  horarioInicio: formData.get("inicio"),
-                  horarioFim: formData.get("fim")
-                });
-              }} className="space-y-4 pt-4 border-t">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Dia da Semana</Label>
-                    <Select name="diaSemana" defaultValue="1">
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {daysOfWeek.map((day, i) => (
-                          <SelectItem key={i} value={i.toString()}>{day}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Horário Início</Label>
-                    <Input name="inicio" type="time" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Horário Fim</Label>
-                    <Input name="fim" type="time" required />
-                  </div>
-                </div>
-                <Button type="submit" className="w-full" disabled={createScheduleMutation.isPending}>
-                  Adicionar Horário
-                </Button>
-              </form>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Chamada</CardTitle>
-          <CardDescription>Registre a presença dos alunos para este dia</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Aluno</TableHead>
-                <TableHead className="text-center w-[300px]">Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {students.map((student) => {
-                const status = getStatus(student.id);
-                return (
-                  <TableRow key={student.id}>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{student.nome}</span>
-                        <span className="text-xs text-muted-foreground">{student.matricula}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-center gap-2">
-                        <Button 
-                          size="sm" 
-                          variant={status === "presente" ? "default" : "outline"}
-                          className={status === "presente" ? "bg-green-600 hover:bg-green-700" : "hover:text-green-600 hover:border-green-600"}
-                          onClick={() => handleStatusChange(student.id, "presente")}
-                        >
-                          <Check className="mr-1 h-3 w-3" /> Presença
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant={status === "atraso" ? "default" : "outline"}
-                          className={status === "atraso" ? "bg-yellow-600 hover:bg-yellow-700" : "hover:text-yellow-600 hover:border-yellow-600"}
-                          onClick={() => handleStatusChange(student.id, "atraso")}
-                        >
-                          <Clock className="mr-1 h-3 w-3" /> Atraso
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant={status === "falta" ? "default" : "outline"}
-                          className={status === "falta" ? "bg-destructive hover:bg-destructive/90" : "hover:text-destructive hover:border-destructive"}
-                          onClick={() => handleStatusChange(student.id, "falta")}
-                        >
-                          <X className="mr-1 h-3 w-3" /> Falta
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-function GradesTab({ classId, students, evaluations }: { classId: number, students: any[], evaluations: any[] }) {
-  const { data: grades } = useClassGrades(classId);
-  const updateGradeMutation = useUpdateGrade();
-
-  const handleGradeChange = (studentId: number, evaluationId: number, value: string) => {
-    const numValue = parseFloat(value);
-    if (!isNaN(numValue)) {
-      updateGradeMutation.mutate({
-        alunoId: studentId,
-        avaliacaoId: evaluationId,
-        valor: numValue
-      });
-    }
-  };
-
-  const getGradeValue = (studentId: number, evaluationId: number) => {
-    const grade = grades?.find(g => g.alunoId === studentId && g.avaliacaoId === evaluationId);
-    return grade ? grade.valor.toString() : "";
-  };
-
-  const calculateStudentAverage = (studentId: number) => {
-    let weightedSum = 0;
-    let totalWeight = 0;
-
-    evaluations.forEach(e => {
-      const grade = grades?.find(g => g.alunoId === studentId && g.avaliacaoId === e.id);
-      if (grade) {
-        const normalizedScore = (grade.valor / e.notaMaxima) * 10;
-        weightedSum += normalizedScore * e.peso;
-        totalWeight += e.peso;
-      }
-    });
-
-    return totalWeight > 0 ? (weightedSum / totalWeight).toFixed(1) : "-";
   };
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Quadro de Notas</CardTitle>
-        <CardDescription>Notas normalizadas (0-10) baseadas no peso</CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <div className="space-y-1">
+          <CardTitle>Registro de Frequência</CardTitle>
+          <CardDescription>Registre a presença dos alunos</CardDescription>
+        </div>
+        <div className="flex items-center gap-2">
+          <Clock className="h-4 w-4 text-muted-foreground" />
+          <Input 
+            type="date" 
+            className="w-40" 
+            value={data} 
+            onChange={(e) => setData(e.target.value)} 
+          />
+        </div>
       </CardHeader>
       <CardContent>
-        {evaluations.length === 0 ? (
-          <div className="flex h-40 flex-col items-center justify-center text-center text-muted-foreground border-2 border-dashed rounded-xl">
-            <FileText className="h-8 w-8 mb-2 opacity-50" />
-            <p>Nenhuma avaliação para exibir notas</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[200px]">Aluno</TableHead>
-                  {evaluations.map(e => (
-                    <TableHead key={e.id} className="text-center min-w-[100px]">
-                      {e.nome}
-                      <div className="text-[10px] text-muted-foreground">Max: {e.notaMaxima} | Peso: {e.peso}</div>
-                    </TableHead>
-                  ))}
-                  <TableHead className="text-center font-bold">Média Final</TableHead>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Aluno</TableHead>
+              <TableHead className="text-center">Status</TableHead>
+              <TableHead className="text-right">Ação</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {students.map((student) => {
+              const record = attendanceData?.find(a => a.alunoId === student.id);
+              const isPresent = record ? record.status === 1 : false;
+              
+              return (
+                <TableRow key={student.id}>
+                  <TableCell className="font-medium">{student.nome}</TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant={isPresent ? "default" : "destructive"}>
+                      {isPresent ? "Presente" : "Faltou"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => toggleAttendance(student.id, isPresent ? 1 : 0)}
+                    >
+                      Alternar
+                    </Button>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {students.map(student => {
-                  const finalAverage = calculateStudentAverage(student.id);
-                  return (
-                    <TableRow key={student.id}>
-                      <TableCell className="font-medium">{student.nome}</TableCell>
-                      {evaluations.map(e => (
-                        <TableCell key={e.id} className="p-1">
-                          <Input
-                            type="number"
-                            step="0.1"
-                            className="h-8 text-center"
-                            defaultValue={getGradeValue(student.id, e.id)}
-                            onBlur={(evt) => handleGradeChange(student.id, e.id, evt.target.value)}
-                          />
-                        </TableCell>
-                      ))}
-                      <TableCell className={`text-center font-bold ${finalAverage !== "-" && Number(finalAverage) >= 6 ? "text-green-600" : "text-destructive"}`}>
-                        {finalAverage}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+              );
+            })}
+          </TableBody>
+        </Table>
       </CardContent>
     </Card>
   );
@@ -1092,7 +1077,10 @@ function DetailsSkeleton() {
             <Skeleton className="h-4 w-24" />
           </div>
         </div>
-        <Skeleton className="h-[400px] w-full rounded-xl" />
+        <div className="flex gap-4 border-b pb-px">
+          {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-10 w-24" />)}
+        </div>
+        <Skeleton className="h-96 w-full rounded-xl" />
       </div>
     </LayoutShell>
   );
@@ -1104,9 +1092,9 @@ function NotFoundState() {
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <AlertCircle className="h-12 w-12 text-destructive mb-4" />
         <h2 className="text-2xl font-bold">Turma não encontrada</h2>
-        <p className="text-muted-foreground mt-2">A turma que você está procurando não existe ou foi removida.</p>
+        <p className="text-muted-foreground mt-2">A turma solicitada não existe ou você não tem permissão para acessá-la.</p>
         <Link href="/">
-          <Button className="mt-6">Voltar para o Início</Button>
+          <Button className="mt-6">Voltar ao Painel</Button>
         </Link>
       </div>
     </LayoutShell>
