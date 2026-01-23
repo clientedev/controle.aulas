@@ -283,16 +283,39 @@ async function signObjectURL({
     method,
     expires_at: new Date(Date.now() + ttlSec * 1000).toISOString(),
   };
+
+  const replitToken = process.env.REPLIT_TOKEN || process.env.REPL_TOKEN;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  
+  // No longer strictly requiring token for local sidecar if it fails with 401
+  // Some environments might prefer the token, others might fail with it if it's expired
+  if (replitToken) {
+    headers["Authorization"] = `Bearer ${replitToken}`;
+  }
+
   const response = await fetch(
     `${REPLIT_SIDECAR_ENDPOINT}/object-storage/signed-object-url`,
     {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify(request),
     }
   );
+
+  if (!response.ok && response.status === 401 && headers["Authorization"]) {
+    // Retry once without auth header if 401 occurs with token
+    const retryResponse = await fetch(
+      `${REPLIT_SIDECAR_ENDPOINT}/object-storage/signed-object-url`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(request),
+      }
+    );
+    if (retryResponse.ok) return (await retryResponse.json()).signed_url;
+  }
   if (!response.ok) {
     throw new Error(
       `Failed to sign object URL, errorcode: ${response.status}, ` +

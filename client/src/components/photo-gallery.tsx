@@ -117,44 +117,55 @@ export function PhotoGallery({ alunoId, alunoNome }: PhotoGalleryProps) {
     setIsUploading(true);
     let successCount = 0;
 
-    // Processar em lotes menores ou sequencialmente com atraso para evitar sobrecarga no sidecar do Replit
+    // Processar em lotes para evitar sobrecarga, mas com retry
     try {
       for (let i = 0; i < capturedPhotos.length; i++) {
         const dataUrl = capturedPhotos[i];
         const blob = dataUrlToBlob(dataUrl);
         const fileName = `aluno_${alunoId}_${Date.now()}_${i}.jpg`;
 
-        const urlRes = await fetch("/api/uploads/request-url", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: fileName,
-            size: blob.size,
-            contentType: "image/jpeg",
-          }),
-        });
+        let retryCount = 0;
+        let uploaded = false;
+        
+        while (retryCount < 3 && !uploaded) {
+          try {
+            const urlRes = await fetch("/api/uploads/request-url", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name: fileName,
+                size: blob.size,
+                contentType: "image/jpeg",
+              }),
+            });
 
-        if (!urlRes.ok) {
-          const errorData = await urlRes.json();
-          throw new Error(errorData.error || "Erro ao obter URL de upload");
+            if (!urlRes.ok) {
+              const errorData = await urlRes.json();
+              throw new Error(errorData.error || "Erro ao obter URL de upload");
+            }
+            
+            const { uploadURL, objectPath } = await urlRes.json();
+
+            const uploadRes = await fetch(uploadURL, {
+              method: "PUT",
+              body: blob,
+              headers: { "Content-Type": "image/jpeg" },
+            });
+
+            if (!uploadRes.ok) throw new Error("Erro ao enviar foto para o storage");
+
+            await apiRequest("POST", `/api/alunos/${alunoId}/fotos`, { objectPath });
+            successCount++;
+            uploaded = true;
+          } catch (e) {
+            retryCount++;
+            if (retryCount === 3) throw e;
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+          }
         }
         
-        const { uploadURL, objectPath } = await urlRes.json();
-
-        const uploadRes = await fetch(uploadURL, {
-          method: "PUT",
-          body: blob,
-          headers: { "Content-Type": "image/jpeg" },
-        });
-
-        if (!uploadRes.ok) throw new Error("Erro ao enviar foto para o storage");
-
-        await apiRequest("POST", `/api/alunos/${alunoId}/fotos`, { objectPath });
-        successCount++;
-        
-        // Pequeno intervalo entre uploads para estabilidade
         if (i < capturedPhotos.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 300));
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
       }
 
