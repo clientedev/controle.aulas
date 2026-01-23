@@ -4,6 +4,7 @@ import { storage, sessionStore } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import session from "express-session";
+import { insertAlunoSchema } from "@shared/schema";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -114,7 +115,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/turmas/:id/unidades-curriculares", autenticar, async (req, res) => {
+  app.get("/api/turmas/:id/unidades-curriculares", autenticar, async (req: any, res) => {
     const turmaId = Number(req.params.id);
     const ucs = await storage.getUnidadesCurricularesDaTurma(turmaId);
     res.json(ucs);
@@ -136,9 +137,9 @@ export async function registerRoutes(
     res.json(alunosList);
   });
 
-  app.post(api.alunos.criar.path, autenticar, async (req, res) => {
+  app.post(api.alunos.criar.path, autenticar, async (req: any, res) => {
     try {
-      const input = api.alunos.criar.input.parse(req.body);
+      const input = insertAlunoSchema.parse(req.body);
       const aluno = await storage.criarAluno(input);
       res.status(201).json(aluno);
     } catch (err) {
@@ -146,7 +147,18 @@ export async function registerRoutes(
     }
   });
 
-  app.post(api.alunos.matricular.path, autenticar, async (req, res) => {
+  app.patch("/api/alunos/:id", autenticar, async (req: any, res) => {
+    try {
+      const id = Number(req.params.id);
+      const data = req.body;
+      const updated = await storage.atualizarAluno(id, data);
+      res.json(updated);
+    } catch (err) {
+      res.status(400).json({ mensagem: "Erro ao atualizar aluno" });
+    }
+  });
+
+  app.post(api.alunos.matricular.path, autenticar, async (req: any, res) => {
     const turmaId = Number(req.params.id);
     const { alunoId } = req.body;
     await storage.matricularAluno(turmaId, alunoId);
@@ -154,7 +166,7 @@ export async function registerRoutes(
   });
 
   // Avaliações
-  app.post("/api/unidades-curriculares/:id/avaliacoes", autenticar, async (req, res) => {
+  app.post("/api/unidades-curriculares/:id/avaliacoes", autenticar, async (req: any, res) => {
     const unidadeCurricularId = Number(req.params.id);
     try {
       const input = api.avaliacoes.criar.input.parse(req.body);
@@ -172,7 +184,7 @@ export async function registerRoutes(
   });
 
   // Notas
-  app.post(api.notas.atualizar.path, autenticar, async (req, res) => {
+  app.post(api.notas.atualizar.path, autenticar, async (req: any, res) => {
     try {
       const input = api.notas.atualizar.input.parse(req.body);
       const nota = await storage.atualizarNota(input);
@@ -189,7 +201,7 @@ export async function registerRoutes(
     res.json(result);
   });
 
-  app.post("/api/turmas/:id/horarios", autenticar, async (req, res) => {
+  app.post("/api/turmas/:id/horarios", autenticar, async (req: any, res) => {
     const id = Number(req.params.id);
     const result = await storage.criarHorario({ ...req.body, turmaId: id });
     res.status(201).json(result);
@@ -209,7 +221,7 @@ export async function registerRoutes(
     res.json(result);
   });
 
-  app.post("/api/turmas/:id/frequencia", autenticar, async (req, res) => {
+  app.post("/api/turmas/:id/frequencia", autenticar, async (req: any, res) => {
     const result = await storage.registrarFrequencia(req.body);
     res.json(result);
   });

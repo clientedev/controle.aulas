@@ -5,7 +5,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
   ArrowLeft, Plus, Trash2, UserPlus, FileText, AlertCircle, 
-  Users, MoreHorizontal, Upload, BookOpen, Clock, Check, X, Minus 
+  Users, MoreHorizontal, Upload, BookOpen, Clock, Check, X, Minus, Download, Pencil 
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useClass, useDeleteClass } from "@/hooks/use-classes";
@@ -41,6 +41,12 @@ const createEvaluationSchema = z.object({
   nome: z.string().min(2, "Nome obrigatório"),
   notaMaxima: z.string().transform(val => parseFloat(val) || 10),
   peso: z.string().transform(val => parseFloat(val) || 1),
+});
+
+const studentSchema = z.object({
+  nome: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
+  email: z.string().email("Email inválido").optional().or(z.literal("")),
+  matricula: z.string().min(1, "Matrícula é obrigatória"),
 });
 
 export default function ClassDetails() {
@@ -175,15 +181,62 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
   const { data: allStudents } = useStudents();
   const enrollMutation = useEnrollStudent(classId);
   const createManyMutation = useCreateManyStudents();
+  
+  const createOneMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch("/api/alunos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Erro ao criar aluno");
+      return res.json();
+    },
+    onSuccess: async (student) => {
+      await enrollMutation.mutateAsync(student.id);
+      queryClient.invalidateQueries({ queryKey: ["/api/alunos"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/turmas", classId] });
+      setEnrollDialogOpen(false);
+      form.reset();
+    }
+  });
+
+  const updateStudentMutation = useMutation({
+    mutationFn: async ({ id, ...data }: any) => {
+      const res = await fetch(`/api/alunos/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Erro ao atualizar aluno");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/turmas", classId] });
+      setEditingStudent(null);
+    }
+  });
+
   const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<any>(null);
   const [selectedStudentId, setSelectedStudentId] = useState<string>("");
   const { toast } = useToast();
+
+  const form = useForm({
+    resolver: zodResolver(studentSchema),
+    defaultValues: { nome: "", email: "", matricula: "" }
+  });
+
+  const editForm = useForm({
+    resolver: zodResolver(studentSchema),
+    defaultValues: { nome: "", email: "", matricula: "" }
+  });
 
   const availableStudents = allStudents?.filter(
     s => !enrolledStudents.find(es => es.id === s.id)
   ) || [];
 
-  const handleEnroll = () => {
+  const handleEnrollExisting = () => {
     if (selectedStudentId) {
       enrollMutation.mutate(Number(selectedStudentId), {
         onSuccess: () => {
@@ -192,6 +245,22 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
         }
       });
     }
+  };
+
+  const onAddIndividual = (data: any) => {
+    createOneMutation.mutate(data);
+  };
+
+  const onEditStudent = (data: any) => {
+    updateStudentMutation.mutate({ id: editingStudent.id, ...data });
+  };
+
+  const downloadTemplate = () => {
+    const data = [{ Nome: "Exemplo Aluno", Email: "aluno@exemplo.com", Matricula: "2024001" }];
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Modelo");
+    XLSX.writeFile(wb, "modelo_alunos.xlsx");
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -209,12 +278,12 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
 
         const formattedStudents = data.map((row: any) => ({
           nome: row.Nome || row.nome,
-          matricula: String(row.Matricula || row.matricula || row.RA || row.ra),
+          matricula: String(row.Matricula || row.matricula || row.RA || row.ra || Math.random().toString(36).substr(2, 9)),
           email: row.Email || row.email || null,
-        })).filter(s => s.nome && s.matricula);
+        })).filter(s => s.nome);
 
         if (formattedStudents.length === 0) {
-          toast({ title: "Erro", description: "Nenhum aluno válido encontrado no arquivo. Certifique-se de que as colunas 'Nome' e 'Matricula' existem.", variant: "destructive" });
+          toast({ title: "Erro", description: "Nenhum aluno válido encontrado no arquivo.", variant: "destructive" });
           return;
         }
 
@@ -236,80 +305,127 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
+      <CardHeader className="flex flex-row items-center justify-between pb-2 gap-4 flex-wrap">
         <div className="space-y-1">
           <CardTitle>Alunos Matriculados</CardTitle>
           <CardDescription>Gerencie os alunos desta turma</CardDescription>
         </div>
-        <Dialog open={enrollDialogOpen} onOpenChange={setEnrollDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <UserPlus className="mr-2 h-4 w-4" />
-              Matricular Aluno
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Matricular Aluno</DialogTitle>
-              <DialogDescription>Selecione um aluno ou suba uma lista Excel (Colunas: Nome, Matricula, Email)</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="student-select">Selecionar Aluno Existente</Label>
-                <select
-                  id="student-select"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background mt-2"
-                  value={selectedStudentId}
-                  onChange={(e) => setSelectedStudentId(e.target.value)}
-                >
-                  <option value="">Selecione um aluno...</option>
-                  {availableStudents.map(student => (
-                    <option key={student.id} value={student.id}>
-                      {student.nome} ({student.matricula})
-                    </option>
-                  ))}
-                </select>
-                <Button 
-                  className="w-full mt-2" 
-                  onClick={handleEnroll} 
-                  disabled={!selectedStudentId || enrollMutation.isPending}
-                >
-                  {enrollMutation.isPending ? "Matriculando..." : "Matricular Selecionado"}
-                </Button>
-              </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={downloadTemplate}>
+            <Download className="mr-2 h-4 w-4" />
+            Modelo Excel
+          </Button>
+          <Dialog open={enrollDialogOpen} onOpenChange={setEnrollDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <UserPlus className="mr-2 h-4 w-4" />
+                Matricular Aluno
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Matricular Aluno</DialogTitle>
+                <DialogDescription>Adicione individualmente, selecione um existente ou importe via Excel</DialogDescription>
+              </DialogHeader>
+              
+              <Tabs defaultValue="individual" className="mt-4">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="individual">Individual</TabsTrigger>
+                  <TabsTrigger value="existing">Existente</TabsTrigger>
+                  <TabsTrigger value="excel">Excel</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="individual" className="space-y-4 pt-4">
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onAddIndividual)} className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="nome"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Nome Completo</FormLabel>
+                            <FormControl><Input placeholder="Nome do aluno" {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>E-mail (Opcional)</FormLabel>
+                            <FormControl><Input placeholder="email@exemplo.com" {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="matricula"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Matrícula / RA</FormLabel>
+                            <FormControl><Input placeholder="Número da matrícula" {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button type="submit" className="w-full" disabled={createOneMutation.isPending}>
+                        {createOneMutation.isPending ? "Salvando..." : "Salvar e Matricular"}
+                      </Button>
+                    </form>
+                  </Form>
+                </TabsContent>
 
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">Ou importar lista</span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="excel-upload" className="cursor-pointer">
-                  <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 hover:bg-muted/50 transition-colors">
-                    <Upload className="h-8 w-8 mb-2 text-muted-foreground" />
-                    <span className="text-sm font-medium">Clique para subir arquivo Excel</span>
-                    <span className="text-xs text-muted-foreground mt-1">Colunas: Nome, Matricula, Email (opcional)</span>
+                <TabsContent value="existing" className="space-y-4 pt-4">
+                  <div className="space-y-2">
+                    <Label>Selecionar Aluno</Label>
+                    <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um aluno..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableStudents.map(student => (
+                          <SelectItem key={student.id} value={student.id.toString()}>
+                            {student.nome} ({student.matricula})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button 
+                      className="w-full mt-4" 
+                      onClick={handleEnrollExisting} 
+                      disabled={!selectedStudentId || enrollMutation.isPending}
+                    >
+                      {enrollMutation.isPending ? "Matriculando..." : "Matricular Selecionado"}
+                    </Button>
                   </div>
-                  <Input 
-                    id="excel-upload" 
-                    type="file" 
-                    accept=".xlsx, .xls" 
-                    className="hidden" 
-                    onChange={handleFileUpload}
-                    disabled={createManyMutation.isPending}
-                  />
-                </Label>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="ghost" onClick={() => setEnrollDialogOpen(false)}>Fechar</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+                </TabsContent>
+
+                <TabsContent value="excel" className="space-y-4 pt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="excel-upload" className="cursor-pointer">
+                      <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-10 hover:bg-muted/50 transition-colors">
+                        <Upload className="h-10 w-10 mb-2 text-muted-foreground" />
+                        <span className="text-sm font-medium">Clique para subir arquivo Excel</span>
+                        <span className="text-xs text-muted-foreground mt-2">Colunas: Nome, Email (opcional), Matricula</span>
+                      </div>
+                      <Input 
+                        id="excel-upload" 
+                        type="file" 
+                        accept=".xlsx, .xls" 
+                        className="hidden" 
+                        onChange={handleFileUpload}
+                        disabled={createManyMutation.isPending}
+                      />
+                    </Label>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </DialogContent>
+          </Dialog>
+        </div>
       </CardHeader>
       <CardContent>
         {enrolledStudents.length === 0 ? (
@@ -334,8 +450,19 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
                   <TableCell className="font-medium">{student.nome}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{student.email || "-"}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <MoreHorizontal className="h-4 w-4" />
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => {
+                        setEditingStudent(student);
+                        editForm.reset({
+                          nome: student.nome,
+                          email: student.email || "",
+                          matricula: student.matricula
+                        });
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" />
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -344,6 +471,54 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
           </Table>
         )}
       </CardContent>
+
+      <Dialog open={!!editingStudent} onOpenChange={(open) => !open && setEditingStudent(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Aluno</DialogTitle>
+          </DialogHeader>
+          <Form {...editForm}>
+            <form onSubmit={editForm.handleSubmit(onEditStudent)} className="space-y-4 pt-4">
+              <FormField
+                control={editForm.control}
+                name="nome"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome Completo</FormLabel>
+                    <FormControl><Input {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>E-mail</FormLabel>
+                    <FormControl><Input {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="matricula"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Matrícula</FormLabel>
+                    <FormControl><Input {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full" disabled={updateStudentMutation.isPending}>
+                {updateStudentMutation.isPending ? "Salvando..." : "Atualizar Dados"}
+              </Button>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

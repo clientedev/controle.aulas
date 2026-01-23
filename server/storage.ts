@@ -130,6 +130,11 @@ export class DatabaseStorage implements IStorage {
     return a;
   }
 
+  async atualizarAluno(id: number, data: Partial<InsertAluno>): Promise<Aluno> {
+    const [updated] = await db.update(alunos).set(data).where(eq(alunos.id, id)).returning();
+    return updated;
+  }
+
   async matricularAluno(turmaId: number, alunoId: number): Promise<void> {
     const existe = await db.select().from(matriculas)
       .where(and(eq(matriculas.turmaId, turmaId), eq(matriculas.alunoId, alunoId)));
