@@ -3,13 +3,16 @@ import { api, buildUrl } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 
-async function handleResponse<T>(res: Response, schema: z.ZodSchema<T>): Promise<T> {
+async function handleResponse<T>(res: Response, schema?: z.ZodSchema<T>): Promise<T> {
   if (!res.ok) {
     const error = await res.json().catch(() => ({ mensagem: "Ocorreu um erro" }));
     throw new Error(error.mensagem || `Erro ${res.status}`);
   }
   const data = await res.json();
-  return schema.parse(data);
+  if (schema) {
+    return schema.parse(data);
+  }
+  return data;
 }
 
 export function useStudents() {
