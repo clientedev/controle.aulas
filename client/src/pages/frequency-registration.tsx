@@ -26,6 +26,7 @@ export default function FrequencyRegistration() {
 
   const [descriptors, setDescriptors] = useState<{ alunoId: number; descriptor: Float32Array }[]>([]);
   const [isProcessingModels, setIsProcessingModels] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
   const [lastAutoCapture, setLastAutoCapture] = useState<number>(0);
   const recognitionCooldown = 5000; // 5 segundos entre registros do mesmo rosto
 
@@ -69,10 +70,24 @@ export default function FrequencyRegistration() {
     if (modelsLoaded && studentPhotos && studentPhotos.length > 0 && descriptors.length === 0) {
       const processDescriptors = async () => {
         setIsProcessingModels(true);
+        const cached = localStorage.getItem("face_descriptors_cache");
+        const cacheData = cached ? JSON.parse(cached) : {};
         const loadedDescriptors: { alunoId: number; descriptor: Float32Array }[] = [];
         
+        let processed = 0;
         for (const photo of studentPhotos) {
           try {
+            processed++;
+            setProcessingProgress(Math.round((processed / studentPhotos.length) * 100));
+            const cacheKey = photo.objectPath || photo.fotoBase64?.substring(0, 100);
+            if (cacheKey && cacheData[cacheKey]) {
+              loadedDescriptors.push({
+                alunoId: photo.alunoId,
+                descriptor: new Float32Array(Object.values(cacheData[cacheKey]))
+              });
+              continue;
+            }
+
             let studentImg: HTMLImageElement;
             if (photo.fotoBase64) {
               studentImg = await faceapi.fetchImage(photo.fotoBase64);
@@ -83,8 +98,11 @@ export default function FrequencyRegistration() {
               continue;
             }
 
-            const detection = await faceapi.detectSingleFace(studentImg).withFaceLandmarks().withFaceDescriptor();
+            const detection = await faceapi.detectSingleFace(studentImg, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
             if (detection) {
+              const descriptorArray = Array.from(detection.descriptor);
+              if (cacheKey) cacheData[cacheKey] = descriptorArray;
+              
               loadedDescriptors.push({
                 alunoId: photo.alunoId,
                 descriptor: detection.descriptor
@@ -94,6 +112,8 @@ export default function FrequencyRegistration() {
             console.error("Error processing photo for descriptor", e);
           }
         }
+        
+        localStorage.setItem("face_descriptors_cache", JSON.stringify(cacheData));
         setDescriptors(loadedDescriptors);
         setIsProcessingModels(false);
       };
@@ -303,9 +323,19 @@ export default function FrequencyRegistration() {
             </div>
 
             {!modelsLoaded || isProcessingModels ? (
-              <div className="flex items-center gap-3 text-primary font-medium">
-                <Loader2 className="h-5 w-5 animate-spin" />
-                <span>{isProcessingModels ? "Otimizando banco de faces..." : "Carregando IA..."}</span>
+              <div className="flex flex-col items-center gap-3 w-full">
+                <div className="flex items-center gap-3 text-primary font-medium">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>{isProcessingModels ? `Otimizando banco de faces (${processingProgress}%)...` : "Carregando IA..."}</span>
+                </div>
+                {isProcessingModels && (
+                  <div className="w-full bg-muted h-2 rounded-full overflow-hidden">
+                    <div 
+                      className="bg-primary h-full transition-all duration-300" 
+                      style={{ width: `${processingProgress}%` }}
+                    />
+                  </div>
+                )}
               </div>
             ) : (
               <div className="w-full">
