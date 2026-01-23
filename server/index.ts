@@ -130,17 +130,7 @@ import { usuarios } from "@shared/schema";
   // Other ports are firewalled. Default to 5000 if not specified.
   const port = parseInt(process.env.PORT || "5000", 10);
   
-  // Test database connection on start for debugging Railway
-  if (process.env.DATABASE_URL) {
-    console.log("Railway: Initializing database check...");
-    db.select().from(usuarios).limit(1).then(() => {
-      console.log("Railway: Database connection successful.");
-    }).catch(err => {
-      console.error("Railway: Database connection FAILED. This might cause 502 if the app crashes:", err);
-    });
-  }
-
-  // Use a timeout to ensure the server starts even if DB is slow
+  // Use a timeout to ensure the server starts immediately to satisfy Railway's health check
   httpServer.listen(
     {
       port,
@@ -149,6 +139,16 @@ import { usuarios } from "@shared/schema";
     },
     () => {
       log(`serving on port ${port}`);
+      
+      // Test database connection AFTER the server is already listening
+      if (process.env.DATABASE_URL) {
+        console.log("Railway: Initializing database check (post-startup)...");
+        db.select().from(usuarios).limit(1).then(() => {
+          console.log("Railway: Database connection successful.");
+        }).catch(err => {
+          console.error("Railway: Database connection FAILED. This might cause issues with data-driven routes:", err);
+        });
+      }
     },
   );
   
