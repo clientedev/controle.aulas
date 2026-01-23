@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { LogOut } from "lucide-react";
 
 export default function FrequencyRegistration() {
-  const { user, logoutMutation } = useAuth();
+  const { user, logout } = useAuth();
   const isTotem = user?.perfil === "totem";
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
@@ -256,7 +256,7 @@ export default function FrequencyRegistration() {
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={() => logoutMutation.mutate()}
+            onClick={() => logout.mutate()}
             title="Sair do Terminal"
           >
             <LogOut className="h-5 w-5" />
