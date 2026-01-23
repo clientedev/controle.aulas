@@ -1,11 +1,12 @@
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 import {
-  usuarios, turmas, alunos, matriculas, avaliacoes, notas, horarios, frequencia, unidadesCurriculares,
+  usuarios, turmas, alunos, matriculas, avaliacoes, notas, horarios, frequencia, unidadesCurriculares, fotosAlunos,
   type Usuario, type InsertUsuario, type Turma, type InsertTurma,
   type Aluno, type InsertAluno, type Avaliacao, type InsertAvaliacao,
   type Nota, type InsertNota, type TurmaComDetalhes, type UnidadeCurricular, type InsertUnidadeCurricular,
-  type Horario, type InsertHorario, type Frequencia, type InsertFrequencia
+  type Horario, type InsertHorario, type Frequencia, type InsertFrequencia,
+  type FotoAluno, type InsertFotoAluno
 } from "@shared/schema";
 import session from "express-session";
 import MemoryStore from "memorystore";
@@ -58,6 +59,11 @@ export interface IStorage {
   excluirHorario(id: number): Promise<void>;
   getFrequenciaDaTurma(turmaId: number, data?: string): Promise<Frequencia[]>;
   registrarFrequencia(data: InsertFrequencia): Promise<Frequencia>;
+
+  // Fotos de Alunos
+  getFotosDoAluno(alunoId: number): Promise<FotoAluno[]>;
+  adicionarFotoAluno(data: InsertFotoAluno): Promise<FotoAluno>;
+  excluirFotoAluno(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -294,6 +300,20 @@ export class DatabaseStorage implements IStorage {
       const [n] = await db.insert(frequencia).values(data).returning();
       return n;
     }
+  }
+
+  // Fotos de Alunos
+  async getFotosDoAluno(alunoId: number): Promise<FotoAluno[]> {
+    return await db.select().from(fotosAlunos).where(eq(fotosAlunos.alunoId, alunoId));
+  }
+
+  async adicionarFotoAluno(data: InsertFotoAluno): Promise<FotoAluno> {
+    const [foto] = await db.insert(fotosAlunos).values(data).returning();
+    return foto;
+  }
+
+  async excluirFotoAluno(id: number): Promise<void> {
+    await db.delete(fotosAlunos).where(eq(fotosAlunos.id, id));
   }
 }
 

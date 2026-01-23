@@ -130,6 +130,13 @@ export const frequencia = pgTable("frequencia", {
   status: text("status").notNull(), // "presente", "falta", "atraso"
 });
 
+export const fotosAlunos = pgTable("fotos_alunos", {
+  id: serial("id").primaryKey(),
+  alunoId: integer("aluno_id").references(() => alunos.id).notNull(),
+  objectPath: text("object_path").notNull(),
+  criadoEm: timestamp("criado_em").defaultNow(),
+});
+
 export const horariosRelations = relations(horarios, ({ one }) => ({
   turma: one(turmas, {
     fields: [horarios.turmaId],
@@ -148,6 +155,13 @@ export const frequenciaRelations = relations(frequencia, ({ one }) => ({
   }),
 }));
 
+export const fotosAlunosRelations = relations(fotosAlunos, ({ one }) => ({
+  aluno: one(alunos, {
+    fields: [fotosAlunos.alunoId],
+    references: [alunos.id],
+  }),
+}));
+
 // === ESQUEMAS DE INSERÇÃO ===
 
 export const insertUsuarioSchema = createInsertSchema(usuarios).omit({ id: true, criadoEm: true });
@@ -159,6 +173,7 @@ export const insertAvaliacaoSchema = createInsertSchema(avaliacoes).omit({ id: t
 export const insertNotaSchema = createInsertSchema(notas).omit({ id: true });
 export const insertHorarioSchema = createInsertSchema(horarios).omit({ id: true });
 export const insertFrequenciaSchema = createInsertSchema(frequencia).omit({ id: true });
+export const insertFotoAlunoSchema = createInsertSchema(fotosAlunos).omit({ id: true, criadoEm: true });
 
 // === TIPOS DE CONTRATO DA API ===
 
@@ -179,6 +194,8 @@ export type Horario = typeof horarios.$inferSelect;
 export type InsertHorario = z.infer<typeof insertHorarioSchema>;
 export type Frequencia = typeof frequencia.$inferSelect;
 export type InsertFrequencia = z.infer<typeof insertFrequenciaSchema>;
+export type FotoAluno = typeof fotosAlunos.$inferSelect;
+export type InsertFotoAluno = z.infer<typeof insertFotoAlunoSchema>;
 
 export type CriarTurmaRequest = Omit<InsertTurma, "professorId">;
 export type AtualizarTurmaRequest = Partial<CriarTurmaRequest>;
