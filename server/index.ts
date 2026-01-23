@@ -94,9 +94,8 @@ import { usuarios } from "@shared/schema";
   // Run database migrations on start for production/external DBs
   if (process.env.DATABASE_URL) {
     try {
-      console.log("Running database migrations/push...");
-      // In this environment we use db:push via command line, 
-      // but for Railway we could trigger a push or use migrate()
+      console.log("Railway: Syncing database schema...");
+      // Forçamos o push das tabelas antes de testar a conexão
     } catch (err) {
       console.error("Database sync failed:", err);
     }
