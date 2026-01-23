@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, User, Mail, Hash, BookOpen, GraduationCap, Calendar } from "lucide-react";
 import type { Aluno, Turma, Nota, Avaliacao, UnidadeCurricular, Frequencia } from "@shared/schema";
 import { LayoutShell } from "@/components/layout-shell";
+import { PhotoGallery } from "@/components/photo-gallery";
 
 type AlunoComDetalhes = Aluno & {
   turmas: Turma[];
@@ -249,6 +250,8 @@ export default function StudentProfile() {
             )}
           </CardContent>
         </Card>
+
+        <PhotoGallery alunoId={aluno.id} alunoNome={aluno.nome} />
       </div>
     </LayoutShell>
   );
