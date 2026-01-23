@@ -74,7 +74,12 @@ app.use((req, res, next) => {
 });
 
 // Serve static files from public/models with correct MIME types
-app.use("/models", express.static(path.join(__dirname, "..", "public", "models"), {
+// In production, models are in dist/public/models; in dev, they're in public/models
+const modelsPath = process.env.NODE_ENV === "production"
+  ? path.join(__dirname, "public", "models")
+  : path.join(process.cwd(), "public", "models");
+
+app.use("/models", express.static(modelsPath, {
   setHeaders: (res, filePath) => {
     if (filePath.endsWith(".json")) {
       res.setHeader("Content-Type", "application/json");
