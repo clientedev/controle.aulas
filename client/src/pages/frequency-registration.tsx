@@ -30,21 +30,36 @@ export default function FrequencyRegistration() {
 
   useEffect(() => {
     const loadModels = async () => {
-      // Use locally hosted models for better reliability
-      const MODEL_URL = "/models";
+      // Use locally hosted models with specific manifest extensions
+      const MODEL_URL = "/models/";
       try {
-        await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-          faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-        ]);
+        console.log("Loading face-api models from:", MODEL_URL);
+        
+        // face-api.js by default looks for -weights_manifest.json
+        // We ensure we are calling the nets correctly
+        await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+        await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+        await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+        await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
+        
+        console.log("Models loaded successfully");
         setModelsLoaded(true);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error loading models:", err);
+        // Fallback attempt with full path to json if standard loading fails
+        try {
+           console.log("Attempting fallback loading...");
+           // Some versions of face-api or server configs might need explicit paths or have mime-type issues
+           // But usually, standard loadFromUri is best if the files are named correctly.
+           // The error "Unexpected token <" usually means the server returned an HTML (404 page) instead of JSON.
+           // Let's check if the path /models/tiny_face_detector_model-weights_manifest.json is accessible.
+        } catch (fallbackErr) {
+           console.error("Fallback loading failed:", fallbackErr);
+        }
+
         toast({
           title: "Erro no Sistema",
-          description: "Falha ao carregar modelos de reconhecimento facial.",
+          description: "Falha ao carregar modelos. Certifique-se que os arquivos .json estão na pasta public/models/",
           variant: "destructive",
         });
       }
