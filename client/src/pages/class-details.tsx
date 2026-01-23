@@ -251,7 +251,7 @@ export default function ClassDetails() {
 
           <TabsContent value="evaluations" className="animate-in fade-in-50 slide-in-from-bottom-2 duration-300">
             <EvaluationsTab 
-              evaluations={classData.avaliacoes || []} 
+              evaluations={(classData as any).avaliacoes || []} 
               unidades={classData.unidadesCurriculares || []} 
               classId={classId}
             />
