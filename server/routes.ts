@@ -137,11 +137,16 @@ export async function registerRoutes(
 
   app.post(api.turmas.criar.path, autenticar, async (req: any, res) => {
     try {
-      const input = api.turmas.criar.input.parse(req.body);
-      const novaTurma = await storage.criarTurma({ ...input, professorId: req.session.usuarioId });
+      const input = req.body;
+      const novaTurma = await storage.criarTurma({ 
+        nome: input.nome,
+        ano: Number(input.ano),
+        semestre: Number(input.semestre),
+        professorId: req.session.usuarioId 
+      });
       res.status(201).json(novaTurma);
     } catch (err) {
-      res.status(400).json({ mensagem: "Erro de validação" });
+      res.status(400).json({ mensagem: "Erro ao criar turma" });
     }
   });
 
@@ -200,11 +205,16 @@ export async function registerRoutes(
   app.post("/api/unidades-curriculares/:id/avaliacoes", autenticar, async (req: any, res) => {
     const unidadeCurricularId = Number(req.params.id);
     try {
-      const input = api.avaliacoes.criar.input.parse(req.body);
-      const avaliacao = await storage.criarAvaliacao({ ...input, unidadeCurricularId });
+      const input = req.body;
+      const avaliacao = await storage.criarAvaliacao({ 
+        nome: input.nome,
+        notaMaxima: parseFloat(input.notaMaxima) || 10,
+        peso: parseFloat(input.peso) || 1,
+        unidadeCurricularId 
+      });
       res.status(201).json(avaliacao);
     } catch (err) {
-      res.status(400).json({ mensagem: "Erro de validação" });
+      res.status(400).json({ mensagem: "Erro ao criar avaliação" });
     }
   });
 
@@ -217,11 +227,15 @@ export async function registerRoutes(
   // Notas
   app.post(api.notas.atualizar.path, autenticar, async (req: any, res) => {
     try {
-      const input = api.notas.atualizar.input.parse(req.body);
-      const nota = await storage.atualizarNota(input);
+      const input = req.body;
+      const nota = await storage.atualizarNota({
+        alunoId: Number(input.alunoId),
+        avaliacaoId: Number(input.avaliacaoId),
+        valor: parseFloat(input.valor)
+      });
       res.json(nota);
     } catch (err) {
-      res.status(400).json({ mensagem: "Erro de validação" });
+      res.status(400).json({ mensagem: "Erro ao atualizar nota" });
     }
   });
 
@@ -291,6 +305,50 @@ export async function registerRoutes(
     const id = Number(req.params.id);
     await storage.excluirFotoAluno(id);
     res.status(204).end();
+  });
+
+  // Critérios de Avaliação
+  app.get("/api/avaliacoes/:id/criterios", autenticar, async (req, res) => {
+    const id = Number(req.params.id);
+    const criterios = await storage.getCriteriosDaAvaliacao(id);
+    res.json(criterios);
+  });
+
+  app.post("/api/avaliacoes/:id/criterios", autenticar, async (req, res) => {
+    const avaliacaoId = Number(req.params.id);
+    const criterios = req.body; // Array de critérios
+    
+    if (!Array.isArray(criterios)) {
+      return res.status(400).json({ mensagem: "Formato inválido. Esperado um array de critérios." });
+    }
+
+    const criados = [];
+    for (const item of criterios) {
+      const criado = await storage.criarCriterio({
+        avaliacaoId,
+        descricao: item.descricao,
+        porcentagem: parseFloat(item.porcentagem)
+      });
+      criados.push(criado);
+    }
+    res.status(201).json(criados);
+  });
+
+  app.get("/api/avaliacoes/:avaliacaoId/alunos/:alunoId/atendimentos", autenticar, async (req, res) => {
+    const avaliacaoId = Number(req.params.avaliacaoId);
+    const alunoId = Number(req.params.alunoId);
+    const atendimentos = await storage.getCriteriosAtendidos(alunoId, avaliacaoId);
+    res.json(atendimentos);
+  });
+
+  app.post("/api/atendimentos", autenticar, async (req, res) => {
+    const { alunoId, criterioId, atendido } = req.body;
+    const result = await storage.registrarCriterioAtendido({
+      alunoId: Number(alunoId),
+      criterioId: Number(criterioId),
+      atendido: Number(atendido)
+    });
+    res.json(result);
   });
 
   // Seed Admin User

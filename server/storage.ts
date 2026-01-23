@@ -2,11 +2,13 @@ import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 import {
   usuarios, turmas, alunos, matriculas, avaliacoes, notas, horarios, frequencia, unidadesCurriculares, fotosAlunos,
+  criteriosAvaliacao, criteriosAtendidos,
   type Usuario, type InsertUsuario, type Turma, type InsertTurma,
   type Aluno, type InsertAluno, type Avaliacao, type InsertAvaliacao,
   type Nota, type InsertNota, type TurmaComDetalhes, type UnidadeCurricular, type InsertUnidadeCurricular,
   type Horario, type InsertHorario, type Frequencia, type InsertFrequencia,
-  type FotoAluno, type InsertFotoAluno
+  type FotoAluno, type InsertFotoAluno, type CriterioAvaliacao, type InsertCriterioAvaliacao,
+  type CriterioAtendido, type InsertCriterioAtendido
 } from "@shared/schema";
 import session from "express-session";
 import MemoryStore from "memorystore";
@@ -65,6 +67,12 @@ export interface IStorage {
   getFotosDoAluno(alunoId: number): Promise<FotoAluno[]>;
   adicionarFotoAluno(data: InsertFotoAluno): Promise<FotoAluno>;
   excluirFotoAluno(id: number): Promise<void>;
+
+  // Critérios de Avaliação
+  getCriteriosDaAvaliacao(avaliacaoId: number): Promise<CriterioAvaliacao[]>;
+  criarCriterio(data: InsertCriterioAvaliacao): Promise<CriterioAvaliacao>;
+  getCriteriosAtendidos(alunoId: number, avaliacaoId: number): Promise<CriterioAtendido[]>;
+  registrarCriterioAtendido(data: InsertCriterioAtendido): Promise<CriterioAtendido>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -320,6 +328,78 @@ export class DatabaseStorage implements IStorage {
 
   async excluirFotoAluno(id: number): Promise<void> {
     await db.delete(fotosAlunos).where(eq(fotosAlunos.id, id));
+  }
+
+  async getCriteriosDaAvaliacao(avaliacaoId: number): Promise<CriterioAvaliacao[]> {
+    return await db.select().from(criteriosAvaliacao).where(eq(criteriosAvaliacao.avaliacaoId, avaliacaoId));
+  }
+
+  async criarCriterio(data: InsertCriterioAvaliacao): Promise<CriterioAvaliacao> {
+    const [c] = await db.insert(criteriosAvaliacao).values(data).returning();
+    return c;
+  }
+
+  async getCriteriosAtendidos(alunoId: number, avaliacaoId: number): Promise<CriterioAtendido[]> {
+    return await db.select({
+      atendimento: criteriosAtendidos
+    })
+    .from(criteriosAtendidos)
+    .innerJoin(criteriosAvaliacao, eq(criteriosAtendidos.criterioId, criteriosAvaliacao.id))
+    .where(and(
+      eq(criteriosAtendidos.alunoId, alunoId),
+      eq(criteriosAvaliacao.avaliacaoId, avaliacaoId)
+    ))
+    .then(res => res.map(r => r.atendimento));
+  }
+
+  async registrarCriterioAtendido(data: InsertCriterioAtendido): Promise<CriterioAtendido> {
+    const [existe] = await db.select().from(criteriosAtendidos)
+      .where(and(
+        eq(criteriosAtendidos.alunoId, data.alunoId),
+        eq(criteriosAtendidos.criterioId, data.criterioId)
+      ));
+
+    if (existe) {
+      const [u] = await db.update(criteriosAtendidos)
+        .set({ atendido: data.atendido })
+        .where(eq(criteriosAtendidos.id, existe.id))
+        .returning();
+      
+      // Recalcular nota do aluno para esta avaliação
+      await this.recalcularNotaAluno(data.alunoId, data.criterioId);
+      
+      return u;
+    } else {
+      const [n] = await db.insert(criteriosAtendidos).values(data).returning();
+      await this.recalcularNotaAluno(data.alunoId, data.criterioId);
+      return n;
+    }
+  }
+
+  private async recalcularNotaAluno(alunoId: number, criterioId: number) {
+    const [criterio] = await db.select().from(criteriosAvaliacao).where(eq(criteriosAvaliacao.id, criterioId));
+    if (!criterio) return;
+
+    const avaliacaoId = criterio.avaliacaoId;
+    const [avaliacao] = await db.select().from(avaliacoes).where(eq(avaliacoes.id, avaliacaoId));
+    if (!avaliacao) return;
+
+    const todosCriterios = await this.getCriteriosDaAvaliacao(avaliacaoId);
+    const atendidos = await this.getCriteriosAtendidos(alunoId, avaliacaoId);
+
+    let notaFinal = 0;
+    for (const c of todosCriterios) {
+      const atendimento = atendidos.find(a => a.criterioId === c.id);
+      if (atendimento?.atendido === 1) {
+        notaFinal += (c.porcentagem / 100) * avaliacao.notaMaxima;
+      }
+    }
+
+    await this.atualizarNota({
+      alunoId,
+      avaliacaoId,
+      valor: parseFloat(notaFinal.toFixed(2))
+    });
   }
 }
 

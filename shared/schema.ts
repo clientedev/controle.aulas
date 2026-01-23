@@ -50,11 +50,25 @@ export const avaliacoes = pgTable("avaliacoes", {
   peso: doublePrecision("peso").default(1.0),
 });
 
+export const criteriosAvaliacao = pgTable("criterios_avaliacao", {
+  id: serial("id").primaryKey(),
+  avaliacaoId: integer("avaliacao_id").references(() => avaliacoes.id).notNull(),
+  descricao: text("descricao").notNull(),
+  porcentagem: doublePrecision("porcentagem").notNull(), // Porcentagem da nota total (ex: 20.0 para 20%)
+});
+
 export const notas = pgTable("notas", {
   id: serial("id").primaryKey(),
   avaliacaoId: integer("avaliacao_id").references(() => avaliacoes.id).notNull(),
   alunoId: integer("aluno_id").references(() => alunos.id).notNull(),
   valor: doublePrecision("valor").notNull(),
+});
+
+export const criteriosAtendidos = pgTable("criterios_atendidos", {
+  id: serial("id").primaryKey(),
+  alunoId: integer("aluno_id").references(() => alunos.id).notNull(),
+  criterioId: integer("criterio_id").references(() => criteriosAvaliacao.id).notNull(),
+  atendido: integer("atendido").notNull().default(0), // 0: não, 1: sim
 });
 
 // === RELAÇÕES ===
@@ -102,6 +116,15 @@ export const avaliacoesRelations = relations(avaliacoes, ({ one, many }) => ({
     references: [unidadesCurriculares.id],
   }),
   notas: many(notas),
+  criterios: many(criteriosAvaliacao),
+}));
+
+export const criteriosAvaliacaoRelations = relations(criteriosAvaliacao, ({ one, many }) => ({
+  avaliacao: one(avaliacoes, {
+    fields: [criteriosAvaliacao.avaliacaoId],
+    references: [avaliacoes.id],
+  }),
+  atendimentos: many(criteriosAtendidos),
 }));
 
 export const notasRelations = relations(notas, ({ one }) => ({
@@ -112,6 +135,17 @@ export const notasRelations = relations(notas, ({ one }) => ({
   aluno: one(alunos, {
     fields: [notas.alunoId],
     references: [alunos.id],
+  }),
+}));
+
+export const criteriosAtendidosRelations = relations(criteriosAtendidos, ({ one }) => ({
+  aluno: one(alunos, {
+    fields: [criteriosAtendidos.alunoId],
+    references: [alunos.id],
+  }),
+  criterio: one(criteriosAvaliacao, {
+    fields: [criteriosAtendidos.criterioId],
+    references: [criteriosAvaliacao.id],
   }),
 }));
 
@@ -176,6 +210,8 @@ export const insertNotaSchema = createInsertSchema(notas).omit({ id: true });
 export const insertHorarioSchema = createInsertSchema(horarios).omit({ id: true });
 export const insertFrequenciaSchema = createInsertSchema(frequencia).omit({ id: true });
 export const insertFotoAlunoSchema = createInsertSchema(fotosAlunos).omit({ id: true, criadoEm: true });
+export const insertCriterioAvaliacaoSchema = createInsertSchema(criteriosAvaliacao).omit({ id: true });
+export const insertCriterioAtendidoSchema = createInsertSchema(criteriosAtendidos).omit({ id: true });
 
 // === TIPOS DE CONTRATO DA API ===
 
@@ -198,6 +234,10 @@ export type Frequencia = typeof frequencia.$inferSelect;
 export type InsertFrequencia = z.infer<typeof insertFrequenciaSchema>;
 export type FotoAluno = typeof fotosAlunos.$inferSelect;
 export type InsertFotoAluno = z.infer<typeof insertFotoAlunoSchema>;
+export type CriterioAvaliacao = typeof criteriosAvaliacao.$inferSelect;
+export type InsertCriterioAvaliacao = z.infer<typeof insertCriterioAvaliacaoSchema>;
+export type CriterioAtendido = typeof criteriosAtendidos.$inferSelect;
+export type InsertCriterioAtendido = z.infer<typeof insertCriterioAtendidoSchema>;
 
 export type CriarTurmaRequest = Omit<InsertTurma, "professorId">;
 export type AtualizarTurmaRequest = Partial<CriarTurmaRequest>;
