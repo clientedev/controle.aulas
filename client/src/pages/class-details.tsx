@@ -46,7 +46,7 @@ const createEvaluationSchema = z.object({
 const studentSchema = z.object({
   nome: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
   email: z.string().email("Email inválido").optional().or(z.literal("")),
-  matricula: z.string().min(1, "Matrícula é obrigatória"),
+  matricula: z.string().optional().or(z.literal("")),
 });
 
 export default function ClassDetails() {
@@ -184,6 +184,10 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
   
   const createOneMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Se não tiver matrícula, gera uma
+      if (!data.matricula) {
+        data.matricula = "ALU" + Math.random().toString(36).substr(2, 6).toUpperCase();
+      }
       const res = await fetch("/api/alunos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -256,7 +260,7 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
   };
 
   const downloadTemplate = () => {
-    const data = [{ Nome: "Exemplo Aluno", Email: "aluno@exemplo.com", Matricula: "2024001" }];
+    const data = [{ Nome: "Exemplo Aluno", Email: "aluno@exemplo.com" }];
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Modelo");
@@ -278,7 +282,7 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
 
         const formattedStudents = data.map((row: any) => ({
           nome: row.Nome || row.nome,
-          matricula: String(row.Matricula || row.matricula || row.RA || row.ra || Math.random().toString(36).substr(2, 9)),
+          matricula: String(row.Matricula || row.matricula || row.RA || row.ra || "ALU" + Math.random().toString(36).substr(2, 6).toUpperCase()),
           email: row.Email || row.email || null,
         })).filter(s => s.nome);
 
@@ -365,8 +369,8 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
                         name="matricula"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Matrícula / RA</FormLabel>
-                            <FormControl><Input placeholder="Número da matrícula" {...field} /></FormControl>
+                            <FormLabel>Matrícula / RA (Opcional)</FormLabel>
+                            <FormControl><Input placeholder="Será gerada se vazio" {...field} /></FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -409,7 +413,7 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
                       <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-10 hover:bg-muted/50 transition-colors">
                         <Upload className="h-10 w-10 mb-2 text-muted-foreground" />
                         <span className="text-sm font-medium">Clique para subir arquivo Excel</span>
-                        <span className="text-xs text-muted-foreground mt-2">Colunas: Nome, Email (opcional), Matricula</span>
+                        <span className="text-xs text-muted-foreground mt-2">Colunas: Nome, Email (opcional)</span>
                       </div>
                       <Input 
                         id="excel-upload" 
