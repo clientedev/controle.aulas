@@ -178,12 +178,11 @@ export default function FrequencyRegistration() {
       const matchPercentage = similarity * 100;
 
       if (bestMatch && matchPercentage >= 70) {
-        if (auto) {
-          setLastAutoCapture(Date.now());
-          setCapturedImage(base64Image);
-          stopVideo();
-        }
+        // Capture image and stop video immediately on recognition
+        setCapturedImage(base64Image);
+        stopVideo();
         
+        setLastAutoCapture(Date.now());
         setRecognitionResult({ aluno: bestMatch.student, distance: minDistance });
         toast({
           title: "Sucesso!",
