@@ -109,8 +109,17 @@ export default function FrequencyRegistration() {
 
       for (const photo of studentPhotos) {
         try {
-          // This assumes objectPath is a valid URL or proxy path
-          const studentImg = await faceapi.fetchImage(photo.objectPath);
+          let studentImg: HTMLImageElement;
+          
+          if (photo.fotoBase64) {
+            studentImg = await faceapi.fetchImage(photo.fotoBase64);
+          } else if (photo.objectPath) {
+            const url = `/api/uploads/url?objectPath=${encodeURIComponent(photo.objectPath)}`;
+            studentImg = await faceapi.fetchImage(url);
+          } else {
+            continue;
+          }
+
           const studentDetection = await faceapi.detectSingleFace(studentImg).withFaceLandmarks().withFaceDescriptor();
           
           if (studentDetection) {
