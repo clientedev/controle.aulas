@@ -147,12 +147,13 @@ export class ObjectStorageService {
 
     // Sign URL for PUT method with TTL
     try {
-      return await signObjectURL({
+      const signedUrl = await signObjectURL({
         bucketName,
         objectName,
         method: "PUT",
-        ttlSec: 900,
+        ttlSec: 1800, // Increase TTL to 30 minutes for batch uploads
       });
+      return signedUrl;
     } catch (error) {
       console.error("Error in signObjectURL:", error);
       throw error;

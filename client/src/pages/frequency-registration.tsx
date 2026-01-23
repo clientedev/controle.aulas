@@ -30,14 +30,24 @@ export default function FrequencyRegistration() {
 
   useEffect(() => {
     const loadModels = async () => {
-      const MODEL_URL = "https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights";
-      await Promise.all([
-        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-        faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-      ]);
-      setModelsLoaded(true);
+      // Use locally hosted models for better reliability
+      const MODEL_URL = "/models";
+      try {
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+          faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+        ]);
+        setModelsLoaded(true);
+      } catch (err) {
+        console.error("Error loading models:", err);
+        toast({
+          title: "Erro no Sistema",
+          description: "Falha ao carregar modelos de reconhecimento facial.",
+          variant: "destructive",
+        });
+      }
     };
     loadModels();
   }, []);
