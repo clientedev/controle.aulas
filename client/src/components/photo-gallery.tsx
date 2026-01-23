@@ -117,6 +117,7 @@ export function PhotoGallery({ alunoId, alunoNome }: PhotoGalleryProps) {
     setIsUploading(true);
     let successCount = 0;
 
+    // Processar em lotes menores ou sequencialmente com atraso para evitar sobrecarga no sidecar do Replit
     try {
       for (let i = 0; i < capturedPhotos.length; i++) {
         const dataUrl = capturedPhotos[i];
@@ -133,7 +134,11 @@ export function PhotoGallery({ alunoId, alunoNome }: PhotoGalleryProps) {
           }),
         });
 
-        if (!urlRes.ok) throw new Error("Erro ao obter URL de upload");
+        if (!urlRes.ok) {
+          const errorData = await urlRes.json();
+          throw new Error(errorData.error || "Erro ao obter URL de upload");
+        }
+        
         const { uploadURL, objectPath } = await urlRes.json();
 
         const uploadRes = await fetch(uploadURL, {
@@ -142,17 +147,26 @@ export function PhotoGallery({ alunoId, alunoNome }: PhotoGalleryProps) {
           headers: { "Content-Type": "image/jpeg" },
         });
 
-        if (!uploadRes.ok) throw new Error("Erro ao enviar foto");
+        if (!uploadRes.ok) throw new Error("Erro ao enviar foto para o storage");
 
         await apiRequest("POST", `/api/alunos/${alunoId}/fotos`, { objectPath });
         successCount++;
+        
+        // Pequeno intervalo entre uploads para estabilidade
+        if (i < capturedPhotos.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
       }
 
       queryClient.invalidateQueries({ queryKey: ["/api/alunos", alunoId, "fotos"] });
       toast({ title: `${successCount} foto(s) salva(s) com sucesso` });
       handleCloseCamera();
-    } catch {
-      toast({ title: "Erro ao salvar fotos", variant: "destructive" });
+    } catch (error: any) {
+      toast({ 
+        title: "Erro ao salvar fotos", 
+        description: error.message || "Ocorreu um erro inesperado",
+        variant: "destructive" 
+      });
     } finally {
       setIsUploading(false);
     }

@@ -146,12 +146,17 @@ export class ObjectStorageService {
     const { bucketName, objectName } = parseObjectPath(fullPath);
 
     // Sign URL for PUT method with TTL
-    return signObjectURL({
-      bucketName,
-      objectName,
-      method: "PUT",
-      ttlSec: 900,
-    });
+    try {
+      return await signObjectURL({
+        bucketName,
+        objectName,
+        method: "PUT",
+        ttlSec: 900,
+      });
+    } catch (error) {
+      console.error("Error in signObjectURL:", error);
+      throw error;
+    }
   }
 
   // Gets the object entity file from the object path.
