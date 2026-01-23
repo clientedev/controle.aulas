@@ -273,6 +273,11 @@ export async function registerRoutes(
     res.json(result);
   });
 
+  app.get("/api/attendance-history", autenticar, async (req, res) => {
+    const history = await storage.getHistoricoCompletoFrequencia();
+    res.json(history);
+  });
+
   // Object Storage Routes
   registerObjectStorageRoutes(app);
 

@@ -63,6 +63,7 @@ export interface IStorage {
   excluirHorario(id: number): Promise<void>;
   getFrequenciaDaTurma(turmaId: number, data?: string): Promise<Frequencia[]>;
   registrarFrequencia(data: InsertFrequencia): Promise<Frequencia>;
+  getHistoricoCompletoFrequencia(): Promise<(Frequencia & { aluno: Aluno; turma: Turma })[]>;
 
   // Fotos de Alunos
   getFotosDoAluno(alunoId: number): Promise<FotoAluno[]>;
@@ -322,6 +323,24 @@ export class DatabaseStorage implements IStorage {
       const [n] = await db.insert(frequencia).values(data).returning();
       return n;
     }
+  }
+
+  async getHistoricoCompletoFrequencia(): Promise<(Frequencia & { aluno: Aluno; turma: Turma })[]> {
+    const resultados = await db.select({
+      frequencia: frequencia,
+      aluno: alunos,
+      turma: turmas
+    })
+    .from(frequencia)
+    .innerJoin(alunos, eq(frequencia.alunoId, alunos.id))
+    .innerJoin(turmas, eq(frequencia.turmaId, turmas.id))
+    .orderBy(frequencia.data);
+    
+    return resultados.map(r => ({
+      ...r.frequencia,
+      aluno: r.aluno,
+      turma: r.turma
+    }));
   }
 
   // Fotos de Alunos

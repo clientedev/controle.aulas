@@ -240,7 +240,9 @@ export default function FrequencyRegistration() {
         title: "Presença registrada",
         description: "A frequência foi salva com sucesso.",
       });
+      // Invalidate both lists to ensure everything updates
       queryClient.invalidateQueries({ queryKey: ["/api/frequencia"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/turmas"] });
     }
   });
 
