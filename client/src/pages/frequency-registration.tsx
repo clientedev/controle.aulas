@@ -243,7 +243,7 @@ export default function FrequencyRegistration() {
   }, [isScanning, modelsLoaded, isProcessingModels, descriptors, recognitionResult]);
 
   const registerPresenceMutation = useMutation({
-    mutationFn: async (data: { alunoId: number; status: number; horario?: string; data?: string; metodo?: string }) => {
+    mutationFn: async (data: { alunoId: number; status: number; horario?: string; data?: string; metodo?: string; turmaId?: number }) => {
       // Find a class for this student to register presence
       const res = await fetch(`/api/alunos/${data.alunoId}`);
       if (!res.ok) throw new Error("Erro ao buscar dados do aluno");
@@ -251,11 +251,15 @@ export default function FrequencyRegistration() {
       
       if (studentData.turmas && studentData.turmas.length > 0) {
         const today = data.data || new Date().toISOString().split('T')[0];
-        console.log(`Totem: Enviando POST para turma ${studentData.turmas[0].id} - Aluno ${data.alunoId}`);
+        const targetTurmaId = studentData.turmas[0].id;
+        console.log(`Totem: Enviando POST para turma ${targetTurmaId} - Aluno ${data.alunoId}`);
         
-        await apiRequest("POST", `/api/turmas/${studentData.turmas[0].id}/frequencia`, {
+        // Atribuir o ID da turma aos dados para que o onSuccess saiba qual turma invalidar
+        data.turmaId = targetTurmaId;
+
+        await apiRequest("POST", `/api/turmas/${targetTurmaId}/frequencia`, {
           alunoId: data.alunoId,
-          turmaId: studentData.turmas[0].id,
+          turmaId: targetTurmaId,
           data: today,
           status: data.status,
           horario: data.horario,
