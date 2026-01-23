@@ -107,16 +107,3 @@ export default function TabletLogin() {
     </div>
   );
 }
-
-
-            {isLoading && (
-              <div className="flex justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            )}
-          </form>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
