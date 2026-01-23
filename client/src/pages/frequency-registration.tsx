@@ -200,38 +200,29 @@ export default function FrequencyRegistration() {
       const matchPercentage = similarity * 100;
 
       if (bestMatch && matchPercentage >= 70) {
-        // Capture image and stop video immediately on recognition
-        setCapturedImage(base64Image);
-        stopVideo();
-        
+        // Aluno identificado
         setLastAutoCapture(Date.now());
         setRecognitionResult({ aluno: bestMatch.student, distance: minDistance });
-        toast({
-          title: "Sucesso!",
-          description: `Aluno identificado: ${bestMatch.student.nome} (${matchPercentage.toFixed(1)}%)`,
-        });
         
-        // Capture current device time
+        // Registrar presença
         const now = new Date();
         const deviceTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         const deviceDate = now.toISOString().split('T')[0];
 
         registerPresenceMutation.mutate({
           alunoId: bestMatch.student.id,
-          status: 1, // 1 para presente
+          status: 1,
           horario: deviceTime,
           data: deviceDate,
           metodo: "facial"
         });
 
-        if (auto) {
-          // Reinicia a busca automática após um tempo para o próximo aluno
-          setTimeout(() => {
-            setRecognitionResult(null);
-            setCapturedImage(null);
-            startVideo();
-          }, 4000);
-        }
+        // Reinicia a busca automática após um tempo para o próximo aluno
+        setTimeout(() => {
+          setRecognitionResult(null);
+          setCapturedImage(null);
+          if (!isScanning) startVideo();
+        }, 3000);
       }
     } catch (err) {
       console.error(err);

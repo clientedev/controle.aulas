@@ -5,7 +5,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
   ArrowLeft, Plus, Trash2, UserPlus, FileText, AlertCircle, 
-  Users, MoreHorizontal, Upload, BookOpen, Clock, Check, X, Minus, Download, Pencil 
+  Users, MoreHorizontal, Upload, BookOpen, Clock, Check, X, Minus, Download, Pencil, Camera 
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useClass, useDeleteClass } from "@/hooks/use-classes";
@@ -73,6 +73,8 @@ export default function ClassDetails() {
       toast({ title: "Sucesso", description: "Turma atualizada com sucesso" });
     }
   });
+
+  const { toast } = useToast();
 
   const classForm = useForm({
     defaultValues: {
