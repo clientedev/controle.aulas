@@ -212,6 +212,9 @@ export default function FrequencyRegistration() {
         const deviceTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         const deviceDate = now.toISOString().split('T')[0];
 
+        console.log("Totem: Aluno identificado:", bestMatch.student.nome);
+        console.log("Totem: Registrando para data:", deviceDate, "horário:", deviceTime);
+
         registerPresenceMutation.mutate({
           alunoId: bestMatch.student.id,
           status: 1,
@@ -248,6 +251,8 @@ export default function FrequencyRegistration() {
       
       if (studentData.turmas && studentData.turmas.length > 0) {
         const today = data.data || new Date().toISOString().split('T')[0];
+        console.log(`Totem: Enviando POST para turma ${studentData.turmas[0].id} - Aluno ${data.alunoId}`);
+        
         await apiRequest("POST", `/api/turmas/${studentData.turmas[0].id}/frequencia`, {
           alunoId: data.alunoId,
           turmaId: studentData.turmas[0].id,
@@ -256,6 +261,9 @@ export default function FrequencyRegistration() {
           horario: data.horario,
           metodo: data.metodo || "facial"
         });
+      } else {
+        console.warn("Totem: Aluno não está matriculado em nenhuma turma.");
+        throw new Error("Aluno não matriculado em turmas");
       }
     },
     onSuccess: (data, variables) => {

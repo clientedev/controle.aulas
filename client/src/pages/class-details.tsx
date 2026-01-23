@@ -1108,7 +1108,8 @@ function AttendanceTab({ classId, students }: { classId: number, students: any[]
       if (!res.ok) return [];
       const result = await res.json();
       return Array.isArray(result) ? result : [];
-    }
+    },
+    refetchInterval: 5000, // Atualiza a cada 5 segundos para capturar registros do totem
   });
 
   const mutation = useMutation({
