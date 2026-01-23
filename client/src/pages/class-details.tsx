@@ -557,12 +557,21 @@ function UnidadesTab({ classId, unidades }: { classId: number, unidades: any[] }
         if (!data) return;
         const wb = XLSX.read(data, { type: "array" });
         const ws = wb.Sheets[wb.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(ws) as any[];
+        const jsonData = XLSX.utils.sheet_to_json(ws, { header: 0, defval: "" }) as any[];
 
-        const criterios = jsonData.map(row => ({
-          descricao: row.Descricao || row.descricao || row.Criterio || row.criterio,
-          peso: parseFloat(row.Peso || row.peso) || 1.0
-        })).filter(c => c.descricao);
+        const criterios = jsonData.map(row => {
+          // Normalize row keys to ignore case and accents if possible
+          const normalizedRow: any = {};
+          Object.keys(row).forEach(key => {
+            const normalizedKey = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            normalizedRow[normalizedKey] = row[key];
+          });
+
+          return {
+            descricao: normalizedRow.descricao || normalizedRow.criterio || normalizedRow.nome || normalizedRow.item || "",
+            peso: parseFloat(String(normalizedRow.peso || normalizedRow.valor).replace(',', '.')) || 1.0
+          };
+        }).filter(c => c.descricao && String(c.descricao).trim() !== "");
 
         if (criterios.length === 0) {
           toast({ title: "Erro", description: "Nenhum critério válido encontrado.", variant: "destructive" });
