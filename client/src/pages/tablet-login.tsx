@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, Keypad } from "lucide-react";
+import { Loader2, Keyboard } from "lucide-react";
 
 export default function TabletLogin() {
   const [pin, setPin] = useState("");
@@ -86,7 +86,7 @@ export default function TabletLogin() {
                   }}
                   disabled={isLoading}
                 >
-                  {btn === "OK" ? <Keypad className="h-6 w-6" /> : btn}
+                  {btn === "OK" ? <Keyboard className="h-6 w-6" /> : btn}
                 </Button>
               ))}
             </div>
