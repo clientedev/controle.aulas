@@ -375,8 +375,10 @@ export default function FrequencyRegistration() {
 
   if (isTotem) {
     return (
-      <div className="min-h-screen bg-background p-6 flex flex-col items-center justify-center">
-        {content}
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4 md:p-8 flex flex-col items-center justify-center">
+        <div className="w-full max-w-6xl animate-in fade-in zoom-in duration-500">
+          {content}
+        </div>
       </div>
     );
   }

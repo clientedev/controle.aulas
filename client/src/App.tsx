@@ -50,6 +50,22 @@ function ProtectedRoute({ component: Component, ...rest }: any) {
 }
 
 function Router() {
+  const { user } = useAuth();
+  
+  if (user?.perfil === "totem") {
+    return (
+      <Switch>
+        <Route path="/frequency" component={FrequencyRegistration} />
+        <Route>
+          {() => {
+            window.location.href = "/frequency";
+            return null;
+          }}
+        </Route>
+      </Switch>
+    );
+  }
+
   return (
     <Switch>
       <Route path="/login" component={Login} />
