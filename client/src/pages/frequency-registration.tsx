@@ -258,14 +258,23 @@ export default function FrequencyRegistration() {
         });
       }
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       toast({
         title: "Presença registrada",
         description: "A frequência foi salva com sucesso.",
       });
-      // Invalidate both lists to ensure everything updates
-      queryClient.invalidateQueries({ queryKey: ["/api/frequencia"] });
+      // Invalidate specific attendance queries to ensure UI updates
       queryClient.invalidateQueries({ queryKey: ["/api/turmas"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/attendance-history"] });
+      
+      // Try to invalidate the specific frequency query if we have the student's data
+      const today = variables.data || new Date().toISOString().split('T')[0];
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/turmas", "frequencia"] 
+      });
+      
+      // Log for debugging
+      console.log("Invalidating frequency for date:", today);
     }
   });
 
