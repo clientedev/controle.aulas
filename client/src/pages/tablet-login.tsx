@@ -17,7 +17,6 @@ export default function TabletLogin() {
     e?.preventDefault();
     if (pin.length < 4) return;
 
-    setIsLoading(false);
     setIsLoading(true);
     try {
       const res = await apiRequest("POST", "/api/auth/login-pin", { pin });

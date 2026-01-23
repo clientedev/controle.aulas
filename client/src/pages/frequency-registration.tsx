@@ -207,13 +207,13 @@ export default function FrequencyRegistration() {
   // Loop de detecção automática
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (isScanning && modelsLoaded && !isProcessingModels) {
+    if (isScanning && modelsLoaded && !isProcessingModels && !recognitionResult) {
       interval = setInterval(() => {
         handleCapture(true);
       }, 1000); // Tenta detectar a cada 1 segundo
     }
     return () => clearInterval(interval);
-  }, [isScanning, modelsLoaded, isProcessingModels, descriptors]);
+  }, [isScanning, modelsLoaded, isProcessingModels, descriptors, recognitionResult]);
 
   const registerPresenceMutation = useMutation({
     mutationFn: async (data: { alunoId: number; status: string }) => {

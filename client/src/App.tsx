@@ -12,6 +12,7 @@ import ClassDetails from "@/pages/class-details";
 import StudentsList from "@/pages/students-list";
 import StudentProfile from "@/pages/student-profile";
 import FrequencyRegistration from "@/pages/frequency-registration";
+import TabletLogin from "@/pages/tablet-login";
 import UsersPage from "@/pages/usuarios";
 import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
@@ -52,6 +53,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
+      <Route path="/tablet-login" component={TabletLogin} />
       
       {/* Protected Routes */}
       <Route path="/">
