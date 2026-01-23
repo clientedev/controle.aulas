@@ -944,7 +944,6 @@ function GradesTab({ classId, students }: { classId: number, students: any[] }) 
     </div>
   );
 }
-
 function EvaluationsTab({ evaluations, unidades, classId }: { evaluations: any[], unidades: any[], classId: number }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -1099,12 +1098,14 @@ function EvaluationsTab({ evaluations, unidades, classId }: { evaluations: any[]
 
 function AttendanceTab({ classId, students }: { classId: number, students: any[] }) {
   const [data, setData] = useState(format(new Date(), "yyyy-MM-dd"));
+  const { toast } = useToast();
   const { data: attendanceData, refetch } = useQuery<any[]>({
     queryKey: ["/api/turmas", classId, "frequencia", { data }],
     queryFn: async () => {
       const res = await fetch(`/api/turmas/${classId}/frequencia?data=${data}`);
       if (!res.ok) return [];
-      return res.json();
+      const result = await res.json();
+      return Array.isArray(result) ? result : [];
     }
   });
 
@@ -1142,6 +1143,12 @@ function AttendanceTab({ classId, students }: { classId: number, students: any[]
           <CardDescription>Registre a presença dos alunos</CardDescription>
         </div>
         <div className="flex items-center gap-2">
+          <Link href="/frequency">
+            <Button variant="outline" size="sm" className="bg-primary/5 text-primary border-primary/20">
+              <Camera className="mr-2 h-4 w-4" />
+              Modo Totem (Câmera)
+            </Button>
+          </Link>
           <Clock className="h-4 w-4 text-muted-foreground" />
           <Input 
             type="date" 
