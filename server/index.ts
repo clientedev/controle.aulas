@@ -133,10 +133,12 @@ import { usuarios } from "@shared/schema";
   
   // Test database connection on start for debugging Railway
   if (process.env.DATABASE_URL) {
+    console.log("Railway: Testing database connection...");
     db.select().from(usuarios).limit(1).then(() => {
       console.log("Railway: Database connection successful.");
     }).catch(err => {
       console.error("Railway: Database connection FAILED. Check if tables exist and DATABASE_URL is correct:", err);
+      // Don't exit process here, let the app try to serve static files/auth routes
     });
   }
 
@@ -144,7 +146,7 @@ import { usuarios } from "@shared/schema";
     {
       port,
       host: "0.0.0.0",
-      reusePort: true,
+      exclusive: false,
     },
     () => {
       log(`serving on port ${port}`);
