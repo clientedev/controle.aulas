@@ -272,14 +272,14 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
     const reader = new FileReader();
     reader.onload = async (evt) => {
       try {
-        const bstr = evt.target?.result;
-        if (typeof bstr !== 'string') return;
-        const wb = XLSX.read(bstr, { type: "binary" });
+        const data = evt.target?.result;
+        if (!data) return;
+        const wb = XLSX.read(data, { type: "array" });
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
-        const data = XLSX.utils.sheet_to_json(ws) as any[];
+        const jsonData = XLSX.utils.sheet_to_json(ws) as any[];
 
-        const formattedStudents = data.map((row: any) => ({
+        const formattedStudents = jsonData.map((row: any) => ({
           nome: row.Nome || row.nome,
           matricula: String(row.Matricula || row.matricula || row.RA || row.ra || "ALU" + Math.random().toString(36).substr(2, 6).toUpperCase()),
           email: row.Email || row.email || null,
@@ -300,10 +300,11 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
           }
         });
       } catch (err) {
+        console.error("Excel import error:", err);
         toast({ title: "Erro", description: "Falha ao processar arquivo Excel", variant: "destructive" });
       }
     };
-    reader.readAsBinaryString(file);
+    reader.readAsArrayBuffer(file);
   };
 
   return (
@@ -552,13 +553,13 @@ function UnidadesTab({ classId, unidades }: { classId: number, unidades: any[] }
     const reader = new FileReader();
     reader.onload = async (evt) => {
       try {
-        const bstr = evt.target?.result;
-        if (typeof bstr !== 'string') return;
-        const wb = XLSX.read(bstr, { type: "binary" });
+        const data = evt.target?.result;
+        if (!data) return;
+        const wb = XLSX.read(data, { type: "array" });
         const ws = wb.Sheets[wb.SheetNames[0]];
-        const data = XLSX.utils.sheet_to_json(ws) as any[];
+        const jsonData = XLSX.utils.sheet_to_json(ws) as any[];
 
-        const criterios = data.map(row => ({
+        const criterios = jsonData.map(row => ({
           descricao: row.Descricao || row.descricao || row.Criterio || row.criterio,
           peso: parseFloat(row.Peso || row.peso) || 1.0
         })).filter(c => c.descricao);
@@ -580,10 +581,11 @@ function UnidadesTab({ classId, unidades }: { classId: number, unidades: any[] }
         setImportDialogOpen(false);
         queryClient.invalidateQueries({ queryKey: ["/api/turmas", classId] });
       } catch (err) {
+        console.error("Excel import error:", err);
         toast({ title: "Erro", description: "Falha ao processar Excel", variant: "destructive" });
       }
     };
-    reader.readAsBinaryString(file);
+    reader.readAsArrayBuffer(file);
   };
 
   const downloadTemplate = () => {
