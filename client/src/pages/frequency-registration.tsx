@@ -41,15 +41,16 @@ export default function FrequencyRegistration() {
 
   useEffect(() => {
     const loadModels = async () => {
-      // Use locally hosted models with specific manifest extensions
       const MODEL_URL = "/models/";
       try {
         console.log("Loading face-api models from:", MODEL_URL);
         
-        await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-        await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-        await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-        await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
+        // Carregamento otimizado: TinyFaceDetector é o principal para totem
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+        ]);
         
         console.log("Models loaded successfully");
         setModelsLoaded(true);
@@ -167,7 +168,8 @@ export default function FrequencyRegistration() {
 
     try {
       const input = await faceapi.fetchImage(base64Image);
-      const detection = await faceapi.detectSingleFace(input, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })).withFaceLandmarks().withFaceDescriptor();
+      // Usar TinyFaceDetector para detecção em tempo real (muito mais rápido que SsdMobilenetv1)
+      const detection = await faceapi.detectSingleFace(input, new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 })).withFaceLandmarks().withFaceDescriptor();
 
       if (!detection) {
         if (!auto) {
