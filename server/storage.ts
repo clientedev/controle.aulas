@@ -36,9 +36,13 @@ export interface IStorage {
 
   // Alunos
   getAlunos(): Promise<Aluno[]>;
+  getAluno(id: number): Promise<Aluno | undefined>;
   criarAluno(data: InsertAluno): Promise<Aluno>;
   matricularAluno(turmaId: number, alunoId: number): Promise<void>;
   getAlunosDaTurma(turmaId: number): Promise<Aluno[]>;
+  getTurmasDoAluno(alunoId: number): Promise<Turma[]>;
+  getNotasDoAluno(alunoId: number): Promise<(Nota & { avaliacao: Avaliacao; unidadeCurricular: UnidadeCurricular })[]>;
+  getFrequenciaDoAluno(alunoId: number): Promise<(Frequencia & { turma: Turma })[]>;
 
   // Avaliações
   getAvaliacoesDaTurma(turmaId: number): Promise<Avaliacao[]>;
@@ -121,6 +125,55 @@ export class DatabaseStorage implements IStorage {
 
   async getAlunos(): Promise<Aluno[]> {
     return await db.select().from(alunos);
+  }
+
+  async getAluno(id: number): Promise<Aluno | undefined> {
+    const [aluno] = await db.select().from(alunos).where(eq(alunos.id, id));
+    return aluno;
+  }
+
+  async getTurmasDoAluno(alunoId: number): Promise<Turma[]> {
+    const resultados = await db.select({
+      turma: turmas
+    })
+    .from(matriculas)
+    .innerJoin(turmas, eq(matriculas.turmaId, turmas.id))
+    .where(eq(matriculas.alunoId, alunoId));
+    
+    return resultados.map(r => r.turma);
+  }
+
+  async getNotasDoAluno(alunoId: number): Promise<(Nota & { avaliacao: Avaliacao; unidadeCurricular: UnidadeCurricular })[]> {
+    const resultados = await db.select({
+      nota: notas,
+      avaliacao: avaliacoes,
+      unidadeCurricular: unidadesCurriculares
+    })
+    .from(notas)
+    .innerJoin(avaliacoes, eq(notas.avaliacaoId, avaliacoes.id))
+    .innerJoin(unidadesCurriculares, eq(avaliacoes.unidadeCurricularId, unidadesCurriculares.id))
+    .where(eq(notas.alunoId, alunoId));
+    
+    return resultados.map(r => ({
+      ...r.nota,
+      avaliacao: r.avaliacao,
+      unidadeCurricular: r.unidadeCurricular
+    }));
+  }
+
+  async getFrequenciaDoAluno(alunoId: number): Promise<(Frequencia & { turma: Turma })[]> {
+    const resultados = await db.select({
+      frequencia: frequencia,
+      turma: turmas
+    })
+    .from(frequencia)
+    .innerJoin(turmas, eq(frequencia.turmaId, turmas.id))
+    .where(eq(frequencia.alunoId, alunoId));
+    
+    return resultados.map(r => ({
+      ...r.frequencia,
+      turma: r.turma
+    }));
   }
 
   async criarAluno(data: InsertAluno): Promise<Aluno> {

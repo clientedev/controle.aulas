@@ -1,11 +1,12 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { LayoutShell } from "@/components/layout-shell";
 import { useStudents, useCreateStudent } from "@/hooks/use-students";
 import { 
   Users, 
   Search, 
   UserPlus, 
-  MoreHorizontal 
+  Eye 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -147,13 +148,15 @@ export default function StudentsList() {
                   <TableRow><TableCell colSpan={3} className="text-center py-8 text-muted-foreground">Nenhum aluno encontrado</TableCell></TableRow>
                 ) : (
                   filteredStudents.map((student) => (
-                    <TableRow key={student.id}>
+                    <TableRow key={student.id} data-testid={`row-student-${student.id}`}>
                       <TableCell className="font-mono">{student.matricula}</TableCell>
                       <TableCell className="font-medium">{student.nome}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
+                        <Link href={`/students/${student.id}`}>
+                          <Button variant="ghost" size="icon" data-testid={`button-view-student-${student.id}`}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </Link>
                       </TableCell>
                     </TableRow>
                   ))

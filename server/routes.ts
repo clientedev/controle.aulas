@@ -137,6 +137,23 @@ export async function registerRoutes(
     res.json(alunosList);
   });
 
+  app.get("/api/alunos/:id", autenticar, async (req, res) => {
+    const id = Number(req.params.id);
+    const aluno = await storage.getAluno(id);
+    if (!aluno) return res.status(404).json({ mensagem: "Aluno não encontrado" });
+
+    const turmasMatriculadas = await storage.getTurmasDoAluno(id);
+    const notasAluno = await storage.getNotasDoAluno(id);
+    const frequenciaAluno = await storage.getFrequenciaDoAluno(id);
+
+    res.json({
+      ...aluno,
+      turmas: turmasMatriculadas,
+      notas: notasAluno,
+      frequencia: frequenciaAluno
+    });
+  });
+
   app.post(api.alunos.criar.path, autenticar, async (req: any, res) => {
     try {
       const input = insertAlunoSchema.parse(req.body);
