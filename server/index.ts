@@ -139,18 +139,18 @@ import { usuarios } from "@shared/schema";
     },
     () => {
       log(`serving on port ${port}`);
-      
-      // Test database connection AFTER the server is already listening
-      if (process.env.DATABASE_URL) {
-        console.log("Railway: Initializing database check (post-startup)...");
-        db.select().from(usuarios).limit(1).then(() => {
-          console.log("Railway: Database connection successful.");
-        }).catch(err => {
-          console.error("Railway: Database connection FAILED. This might cause issues with data-driven routes:", err);
-        });
-      }
     },
   );
+
+  // Test database connection AFTER the server is already listening
+  if (process.env.DATABASE_URL) {
+    console.log("Railway: Initializing database check (post-startup)...");
+    db.select().from(usuarios).limit(1).then(() => {
+      console.log("Railway: Database connection successful.");
+    }).catch(err => {
+      console.error("Railway: Database connection FAILED. This might cause issues with data-driven routes:", err);
+    });
+  }
   
   // No start application logic needed here for migrations
 })();
