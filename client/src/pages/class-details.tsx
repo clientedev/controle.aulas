@@ -56,6 +56,32 @@ export default function ClassDetails() {
   const { data: classData, isLoading } = useClass(classId);
   const deleteClassMutation = useDeleteClass();
   
+  const [isEditingClass, setIsEditingClass] = useState(false);
+  const updateClassMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch(`/api/turmas/${classId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Erro ao atualizar turma");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/turmas", classId] });
+      setIsEditingClass(false);
+      toast({ title: "Sucesso", description: "Turma atualizada com sucesso" });
+    }
+  });
+
+  const classForm = useForm({
+    defaultValues: {
+      nome: classData?.nome || "",
+      ano: classData?.ano?.toString() || new Date().getFullYear().toString(),
+      semestre: classData?.semestre?.toString() || "1",
+    }
+  });
+
   if (isLoading) return <DetailsSkeleton />;
   if (!classData) return <NotFoundState />;
 
@@ -75,6 +101,16 @@ export default function ClassDetails() {
                 <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
                   {classData.ano} • {classData.semestre}º Sem.
                 </Badge>
+                <Button variant="ghost" size="sm" onClick={() => {
+                  setIsEditingClass(true);
+                  classForm.reset({
+                    nome: classData.nome,
+                    ano: classData.ano.toString(),
+                    semestre: classData.semestre.toString(),
+                  });
+                }}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
               </div>
               <p className="text-muted-foreground font-medium">Turma</p>
             </div>
@@ -109,6 +145,65 @@ export default function ClassDetails() {
             </AlertDialog>
           </div>
         </div>
+
+        <Dialog open={isEditingClass} onOpenChange={setIsEditingClass}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Turma</DialogTitle>
+            </DialogHeader>
+            <Form {...classForm}>
+              <form onSubmit={classForm.handleSubmit((data) => updateClassMutation.mutate({
+                ...data,
+                ano: parseInt(data.ano),
+                semestre: parseInt(data.semestre)
+              }))} className="space-y-4 pt-4">
+                <FormField
+                  control={classForm.control}
+                  name="nome"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome da Turma</FormLabel>
+                      <FormControl><Input {...field} /></FormControl>
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={classForm.control}
+                    name="ano"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Ano</FormLabel>
+                        <FormControl><Input type="number" {...field} /></FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={classForm.control}
+                    name="semestre"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Semestre</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="1">1º Semestre</SelectItem>
+                            <SelectItem value="2">2º Semestre</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={updateClassMutation.isPending}>
+                  {updateClassMutation.isPending ? "Salvando..." : "Salvar Alterações"}
+                </Button>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
 
         <Tabs defaultValue="students" className="w-full space-y-6">
           <TabsList className="w-full justify-start border-b bg-transparent p-0">
