@@ -22,8 +22,14 @@ function ProtectedRoute({ component: Component, ...rest }: any) {
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      setLocation("/login");
+    if (!isLoading) {
+      if (!user) {
+        setLocation("/login");
+      } else if (user.perfil === "totem") {
+        if (window.location.pathname !== "/frequency") {
+          setLocation("/frequency");
+        }
+      }
     }
   }, [isLoading, user, setLocation]);
 
@@ -39,6 +45,15 @@ function ProtectedRoute({ component: Component, ...rest }: any) {
     return null;
   }
 
+  // Totem restriction: ONLY /frequency
+  if (user.perfil === "totem") {
+    if (window.location.pathname !== "/frequency") {
+      return null;
+    }
+    // Render without shell for totem
+    return <Component {...rest} />;
+  }
+
   // Admin access control for specific paths
   const path = rest.path;
   if (path === "/usuarios" && user.perfil !== "admin") {
@@ -50,16 +65,33 @@ function ProtectedRoute({ component: Component, ...rest }: any) {
 }
 
 function Router() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Se o usuário for totem, ele fica preso no Router específico
   if (user?.perfil === "totem") {
     return (
       <Switch>
         <Route path="/frequency" component={FrequencyRegistration} />
         <Route>
           {() => {
-            window.location.href = "/frequency";
-            return null;
+            useEffect(() => {
+              if (window.location.pathname !== "/frequency") {
+                window.location.replace("/frequency");
+              }
+            }, []);
+            return (
+              <div className="flex h-screen w-full items-center justify-center bg-background">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            );
           }}
         </Route>
       </Switch>
