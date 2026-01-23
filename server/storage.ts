@@ -270,7 +270,8 @@ export class DatabaseStorage implements IStorage {
     })
     .from(notas)
     .innerJoin(avaliacoes, eq(notas.avaliacaoId, avaliacoes.id))
-    .where(eq(avaliacoes.turmaId, turmaId));
+    .innerJoin(unidadesCurriculares, eq(avaliacoes.unidadeCurricularId, unidadesCurriculares.id))
+    .where(eq(unidadesCurriculares.turmaId, turmaId));
 
     return resultados.map(r => r.nota);
   }
