@@ -1102,7 +1102,7 @@ function AttendanceTab({ classId, students }: { classId: number, students: any[]
   const [data, setData] = useState(format(new Date(), "yyyy-MM-dd"));
   const { toast } = useToast();
   const { data: attendanceData, refetch } = useQuery<any[]>({
-    queryKey: ["/api/turmas", classId, "frequencia", { data }],
+    queryKey: ["/api/turmas", classId, "frequencia", data],
     queryFn: async () => {
       const res = await fetch(`/api/turmas/${classId}/frequencia?data=${data}`);
       if (!res.ok) return [];
@@ -1120,7 +1120,10 @@ function AttendanceTab({ classId, students }: { classId: number, students: any[]
       });
       return res.json();
     },
-    onSuccess: () => refetch()
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/turmas", classId, "frequencia"] });
+      refetch();
+    }
   });
 
   const toggleAttendance = (alunoId: number, currentStatus: number) => {

@@ -267,13 +267,11 @@ export default function FrequencyRegistration() {
       queryClient.invalidateQueries({ queryKey: ["/api/turmas"] });
       queryClient.invalidateQueries({ queryKey: ["/api/attendance-history"] });
       
+      // Invalidate the generic frequency key to catch all class-details tabs
+      queryClient.invalidateQueries({ queryKey: ["/api/turmas", "frequencia"] });
+      
       // Try to invalidate the specific frequency query if we have the student's data
       const today = variables.data || new Date().toISOString().split('T')[0];
-      queryClient.invalidateQueries({ 
-        queryKey: ["/api/turmas", "frequencia"] 
-      });
-      
-      // Log for debugging
       console.log("Invalidating frequency for date:", today);
     }
   });
