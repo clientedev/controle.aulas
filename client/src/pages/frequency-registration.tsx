@@ -209,9 +209,17 @@ export default function FrequencyRegistration() {
           description: `Aluno identificado: ${bestMatch.student.nome} (${matchPercentage.toFixed(1)}%)`,
         });
         
+        // Capture current device time
+        const now = new Date();
+        const deviceTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const deviceDate = now.toISOString().split('T')[0];
+
         registerPresenceMutation.mutate({
           alunoId: bestMatch.student.id,
-          status: "presente"
+          status: 1, // 1 para presente
+          horario: deviceTime,
+          data: deviceDate,
+          metodo: "facial"
         });
 
         if (auto) {
@@ -240,18 +248,20 @@ export default function FrequencyRegistration() {
   }, [isScanning, modelsLoaded, isProcessingModels, descriptors, recognitionResult]);
 
   const registerPresenceMutation = useMutation({
-    mutationFn: async (data: { alunoId: number; status: string }) => {
+    mutationFn: async (data: { alunoId: number; status: number; horario?: string; data?: string; metodo?: string }) => {
       // Find a class for this student to register presence
       const studentClasses = await apiRequest("GET", `/api/alunos/${data.alunoId}`);
       const studentData = await studentClasses.json();
       
       if (studentData.turmas && studentData.turmas.length > 0) {
-        const today = new Date().toISOString().split('T')[0];
+        const today = data.data || new Date().toISOString().split('T')[0];
         await apiRequest("POST", `/api/turmas/${studentData.turmas[0].id}/frequencia`, {
           alunoId: data.alunoId,
           turmaId: studentData.turmas[0].id,
           data: today,
-          status: data.status
+          status: data.status,
+          horario: data.horario,
+          metodo: data.metodo || "facial"
         });
       }
     },
