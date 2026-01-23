@@ -140,22 +140,22 @@ export default function FrequencyRegistration() {
 
     try {
       const input = await faceapi.fetchImage(base64Image);
-      // Use TinyFaceDetector for faster detection on capture
-      const detection = await faceapi.detectSingleFace(input, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+      // Voltando para SsdMobilenetv1 para maior precisão na identificação, mesmo sendo levemente mais lento
+      const detection = await faceapi.detectSingleFace(input, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })).withFaceLandmarks().withFaceDescriptor();
 
       if (!detection) {
         toast({
           title: "Erro",
-          description: "Nenhuma face detectada na imagem.",
+          description: "Nenhuma face detectada. Tente se posicionar melhor e garanta boa iluminação.",
           variant: "destructive",
         });
         return;
       }
 
       let bestMatch: { student: Aluno; distance: number } | null = null;
-      let minDistance = 1.0;
+      let minDistance = 0.6; // Threshold padrão do face-api.js para faces diferentes
 
-      // Extremely fast comparison now that descriptors are pre-loaded
+      // Comparação precisa com os descritores pré-carregados
       for (const item of descriptors) {
         const distance = faceapi.euclideanDistance(detection.descriptor, item.descriptor);
         if (distance < minDistance) {
@@ -167,7 +167,11 @@ export default function FrequencyRegistration() {
         }
       }
 
-      const matchPercentage = (1 - minDistance) * 100;
+      // Convertendo distância para porcentagem de similaridade
+      // Distância 0 = 100% similar, Distância 0.6 = ~40% similar (limite de reconhecimento)
+      // Para o requisito de 70%, a distância máxima deve ser 0.3
+      const similarity = Math.max(0, 1 - minDistance);
+      const matchPercentage = similarity * 100;
 
       if (bestMatch && matchPercentage >= 70) {
         setRecognitionResult({ aluno: bestMatch.student, distance: minDistance });
