@@ -5,6 +5,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import session from "express-session";
 import { insertAlunoSchema } from "@shared/schema";
+import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -241,6 +242,32 @@ export async function registerRoutes(
   app.post("/api/turmas/:id/frequencia", autenticar, async (req: any, res) => {
     const result = await storage.registrarFrequencia(req.body);
     res.json(result);
+  });
+
+  // Object Storage Routes
+  registerObjectStorageRoutes(app);
+
+  // Fotos de Alunos
+  app.get("/api/alunos/:id/fotos", autenticar, async (req, res) => {
+    const id = Number(req.params.id);
+    const fotos = await storage.getFotosDoAluno(id);
+    res.json(fotos);
+  });
+
+  app.post("/api/alunos/:id/fotos", autenticar, async (req: any, res) => {
+    const alunoId = Number(req.params.id);
+    const { objectPath } = req.body;
+    if (!objectPath) {
+      return res.status(400).json({ mensagem: "objectPath é obrigatório" });
+    }
+    const foto = await storage.adicionarFotoAluno({ alunoId, objectPath });
+    res.status(201).json(foto);
+  });
+
+  app.delete("/api/fotos/:id", autenticar, async (req, res) => {
+    const id = Number(req.params.id);
+    await storage.excluirFotoAluno(id);
+    res.status(204).end();
   });
 
   // Seed Admin User
