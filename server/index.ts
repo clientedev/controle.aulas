@@ -2,6 +2,11 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import path, { dirname } from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 const httpServer = createServer(app);
@@ -58,6 +63,15 @@ app.use((req, res, next) => {
 
   next();
 });
+
+// Serve static files from public/models with correct MIME types
+app.use("/models", express.static(path.join(__dirname, "..", "public", "models"), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith(".json")) {
+      res.setHeader("Content-Type", "application/json");
+    }
+  }
+}));
 
 (async () => {
   await registerRoutes(httpServer, app);
