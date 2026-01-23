@@ -133,15 +133,15 @@ import { usuarios } from "@shared/schema";
   
   // Test database connection on start for debugging Railway
   if (process.env.DATABASE_URL) {
-    console.log("Railway: Testing database connection...");
+    console.log("Railway: Initializing database check...");
     db.select().from(usuarios).limit(1).then(() => {
       console.log("Railway: Database connection successful.");
     }).catch(err => {
-      console.error("Railway: Database connection FAILED. Check if tables exist and DATABASE_URL is correct:", err);
-      // Don't exit process here, let the app try to serve static files/auth routes
+      console.error("Railway: Database connection FAILED. This might cause 502 if the app crashes:", err);
     });
   }
 
+  // Use a timeout to ensure the server starts even if DB is slow
   httpServer.listen(
     {
       port,
