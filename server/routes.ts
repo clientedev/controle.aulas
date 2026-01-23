@@ -266,11 +266,11 @@ export async function registerRoutes(
 
   app.post("/api/alunos/:id/fotos", autenticar, async (req: any, res) => {
     const alunoId = Number(req.params.id);
-    const { objectPath } = req.body;
-    if (!objectPath) {
-      return res.status(400).json({ mensagem: "objectPath é obrigatório" });
+    const { objectPath, fotoBase64 } = req.body;
+    if (!objectPath && !fotoBase64) {
+      return res.status(400).json({ mensagem: "objectPath ou fotoBase64 é obrigatório" });
     }
-    const foto = await storage.adicionarFotoAluno({ alunoId, objectPath });
+    const foto = await storage.adicionarFotoAluno({ alunoId, objectPath, fotoBase64 });
     res.status(201).json(foto);
   });
 

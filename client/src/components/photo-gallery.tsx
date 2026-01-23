@@ -117,55 +117,20 @@ export function PhotoGallery({ alunoId, alunoNome }: PhotoGalleryProps) {
     setIsUploading(true);
     let successCount = 0;
 
-    // Processar em lotes para evitar sobrecarga, mas com retry
     try {
       for (let i = 0; i < capturedPhotos.length; i++) {
         const dataUrl = capturedPhotos[i];
-        const blob = dataUrlToBlob(dataUrl);
-        const fileName = `aluno_${alunoId}_${Date.now()}_${i}.jpg`;
-
-        let retryCount = 0;
-        let uploaded = false;
         
-        while (retryCount < 3 && !uploaded) {
-          try {
-            const urlRes = await fetch("/api/uploads/request-url", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                name: fileName,
-                size: blob.size,
-                contentType: "image/jpeg",
-              }),
-            });
-
-            if (!urlRes.ok) {
-              const errorData = await urlRes.json();
-              throw new Error(errorData.error || "Erro ao obter URL de upload");
-            }
-            
-            const { uploadURL, objectPath } = await urlRes.json();
-
-            const uploadRes = await fetch(uploadURL, {
-              method: "PUT",
-              body: blob,
-              headers: { "Content-Type": "image/jpeg" },
-            });
-
-            if (!uploadRes.ok) throw new Error("Erro ao enviar foto para o storage");
-
-            await apiRequest("POST", `/api/alunos/${alunoId}/fotos`, { objectPath });
-            successCount++;
-            uploaded = true;
-          } catch (e) {
-            retryCount++;
-            if (retryCount === 3) throw e;
-            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-          }
-        }
+        // Agora salvamos diretamente no banco de dados para evitar erros de storage
+        await apiRequest("POST", `/api/alunos/${alunoId}/fotos`, { 
+          fotoBase64: dataUrl 
+        });
         
+        successCount++;
+        
+        // Pequeno atraso para não sobrecarregar o banco em inserções em massa
         if (i < capturedPhotos.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
 
@@ -219,7 +184,7 @@ export function PhotoGallery({ alunoId, alunoNome }: PhotoGalleryProps) {
             {fotos.map((foto) => (
               <div key={foto.id} className="relative group aspect-square" data-testid={`photo-${foto.id}`}>
                 <img
-                  src={getPhotoUrl(foto.objectPath)}
+                  src={foto.fotoBase64 || getPhotoUrl(foto.objectPath || "")}
                   alt={`Foto de ${alunoNome}`}
                   className="w-full h-full object-cover rounded-md border"
                 />

@@ -307,7 +307,7 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(fotosAlunos).where(eq(fotosAlunos.alunoId, alunoId));
   }
 
-  async adicionarFotoAluno(data: InsertFotoAluno): Promise<FotoAluno> {
+  async adicionarFotoAluno(data: { alunoId: number; objectPath?: string; fotoBase64?: string }): Promise<FotoAluno> {
     const [foto] = await db.insert(fotosAlunos).values(data).returning();
     return foto;
   }

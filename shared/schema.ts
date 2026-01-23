@@ -133,7 +133,8 @@ export const frequencia = pgTable("frequencia", {
 export const fotosAlunos = pgTable("fotos_alunos", {
   id: serial("id").primaryKey(),
   alunoId: integer("aluno_id").references(() => alunos.id).notNull(),
-  objectPath: text("object_path").notNull(),
+  objectPath: text("object_path"), // Mantido para compatibilidade
+  fotoBase64: text("foto_base64"), // Nova coluna para armazenar a imagem no banco
   criadoEm: timestamp("criado_em").defaultNow(),
 });
 
