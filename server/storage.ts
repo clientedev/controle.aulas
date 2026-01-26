@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import {
   usuarios, turmas, alunos, matriculas, avaliacoes, notas, horarios, frequencia, unidadesCurriculares, fotosAlunos,
   criteriosAvaliacao, criteriosAtendidos, notasCriterios,
@@ -162,28 +162,43 @@ export class DatabaseStorage implements IStorage {
   }
 
   async excluirTurma(id: number): Promise<void> {
-    await db.transaction(async (tx) => {
-      // Garantir limpeza manual mesmo com CASCADE para evitar erros de transação
-      const ucs = await tx.select().from(unidadesCurriculares).where(eq(unidadesCurriculares.turmaId, id));
-      for (const uc of ucs) {
-        await tx.delete(notasCriterios).where(eq(notasCriterios.unidadeCurricularId, uc.id));
-        const criterios = await tx.select().from(criteriosAvaliacao).where(eq(criteriosAvaliacao.unidadeCurricularId, uc.id));
-        for (const crit of criterios) {
-          await tx.delete(criteriosAtendidos).where(eq(criteriosAtendidos.criterioId, crit.id));
+    try {
+      // Limpeza direta e absoluta via SQL bruto para garantir que nada impeça a exclusão
+      await db.execute(sql`DELETE FROM notas_criterios WHERE unidade_curricular_id IN (SELECT id FROM unidades_curriculares WHERE turma_id = ${id})`);
+      await db.execute(sql`DELETE FROM criterios_atendidos WHERE criterio_id IN (SELECT id FROM criterios_avaliacao WHERE unidade_curricular_id IN (SELECT id FROM unidades_curriculares WHERE turma_id = ${id}))`);
+      await db.execute(sql`DELETE FROM criterios_avaliacao WHERE unidade_curricular_id IN (SELECT id FROM unidades_curriculares WHERE turma_id = ${id})`);
+      await db.execute(sql`DELETE FROM notas WHERE avaliacao_id IN (SELECT id FROM avaliacoes WHERE unidade_curricular_id IN (SELECT id FROM unidades_curriculares WHERE turma_id = ${id}))`);
+      await db.execute(sql`DELETE FROM avaliacoes WHERE unidade_curricular_id IN (SELECT id FROM unidades_curriculares WHERE turma_id = ${id})`);
+      await db.execute(sql`DELETE FROM unidades_curriculares WHERE turma_id = ${id}`);
+      await db.execute(sql`DELETE FROM matriculas WHERE turma_id = ${id}`);
+      await db.execute(sql`DELETE FROM horarios WHERE turma_id = ${id}`);
+      await db.execute(sql`DELETE FROM frequencia WHERE turma_id = ${id}`);
+      await db.execute(sql`DELETE FROM turmas WHERE id = ${id}`);
+    } catch (error) {
+      console.error(`Erro ao excluir turma ${id} via SQL bruto:`, error);
+      // Fallback para o método de transação ORM se o SQL falhar
+      await db.transaction(async (tx) => {
+        const ucs = await tx.select().from(unidadesCurriculares).where(eq(unidadesCurriculares.turmaId, id));
+        for (const uc of ucs) {
+          await tx.delete(notasCriterios).where(eq(notasCriterios.unidadeCurricularId, uc.id));
+          const criterios = await tx.select().from(criteriosAvaliacao).where(eq(criteriosAvaliacao.unidadeCurricularId, uc.id));
+          for (const crit of criterios) {
+            await tx.delete(criteriosAtendidos).where(eq(criteriosAtendidos.criterioId, crit.id));
+          }
+          await tx.delete(criteriosAvaliacao).where(eq(criteriosAvaliacao.unidadeCurricularId, uc.id));
+          const avs = await tx.select().from(avaliacoes).where(eq(avaliacoes.unidadeCurricularId, uc.id));
+          for (const av of avs) {
+            await tx.delete(notas).where(eq(notas.avaliacaoId, av.id));
+          }
+          await tx.delete(avaliacoes).where(eq(avaliacoes.unidadeCurricularId, uc.id));
         }
-        await tx.delete(criteriosAvaliacao).where(eq(criteriosAvaliacao.unidadeCurricularId, uc.id));
-        const avs = await tx.select().from(avaliacoes).where(eq(avaliacoes.unidadeCurricularId, uc.id));
-        for (const av of avs) {
-          await tx.delete(notas).where(eq(notas.avaliacaoId, av.id));
-        }
-        await tx.delete(avaliacoes).where(eq(avaliacoes.unidadeCurricularId, uc.id));
-      }
-      await tx.delete(unidadesCurriculares).where(eq(unidadesCurriculares.turmaId, id));
-      await tx.delete(matriculas).where(eq(matriculas.turmaId, id));
-      await tx.delete(horarios).where(eq(horarios.turmaId, id));
-      await tx.delete(frequencia).where(eq(frequencia.turmaId, id));
-      await tx.delete(turmas).where(eq(turmas.id, id));
-    });
+        await tx.delete(unidadesCurriculares).where(eq(unidadesCurriculares.turmaId, id));
+        await tx.delete(matriculas).where(eq(matriculas.turmaId, id));
+        await tx.delete(horarios).where(eq(horarios.turmaId, id));
+        await tx.delete(frequencia).where(eq(frequencia.turmaId, id));
+        await tx.delete(turmas).where(eq(turmas.id, id));
+      });
+    }
   }
 
   async getUnidadesCurricularesDaTurma(turmaId: number): Promise<UnidadeCurricular[]> {

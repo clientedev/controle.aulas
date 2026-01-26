@@ -90,13 +90,14 @@ export default function FrequencyRegistration() {
             }
 
             let studentImg: HTMLImageElement;
-            if (photo.fotoBase64 && photo.fotoBase64.length > 10) {
-              // Garantir que o base64 seja uma string de imagem válida
-              const base64Data = photo.fotoBase64.startsWith('data:') 
-                ? photo.fotoBase64 
-                : `data:image/jpeg;base64,${photo.fotoBase64}`;
+            if (photo.fotoBase64 && photo.fotoBase64.trim().length > 50) {
               try {
-                studentImg = await faceapi.fetchImage(base64Data);
+                // Limpeza agressiva da string base64 para evitar erro de blob type
+                let cleanBase64 = photo.fotoBase64.trim();
+                if (!cleanBase64.startsWith('data:')) {
+                  cleanBase64 = `data:image/jpeg;base64,${cleanBase64}`;
+                }
+                studentImg = await faceapi.fetchImage(cleanBase64);
               } catch (imgErr) {
                 console.error("Erro ao carregar imagem base64:", imgErr);
                 continue;
