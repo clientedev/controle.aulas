@@ -415,7 +415,11 @@ export class DatabaseStorage implements IStorage {
 
       if (existe) {
         const [u] = await db.update(frequencia)
-          .set({ status: data.status })
+          .set({ 
+            status: data.status,
+            horario: data.horario || format(new Date(), "HH:mm"),
+            metodo: data.metodo || "manual"
+          })
           .where(eq(frequencia.id, existe.id))
           .returning();
         return u;
@@ -424,7 +428,9 @@ export class DatabaseStorage implements IStorage {
           alunoId: data.alunoId,
           turmaId: data.turmaId,
           data: today,
-          status: data.status
+          status: data.status,
+          horario: data.horario || format(new Date(), "HH:mm"),
+          metodo: data.metodo || "manual"
         }).returning();
         return n;
       }

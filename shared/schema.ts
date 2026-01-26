@@ -173,6 +173,8 @@ export const frequencia = pgTable("frequencia", {
   turmaId: integer("turma_id").references(() => turmas.id, { onDelete: "cascade" }).notNull(),
   data: text("data").notNull(), // YYYY-MM-DD
   status: integer("status").notNull().default(1), // 0: falta, 1: presente
+  horario: text("horario"), // HH:mm
+  metodo: text("metodo"), // "manual" ou "facial"
 });
 
 export const fotosAlunos = pgTable("fotos_alunos", {
