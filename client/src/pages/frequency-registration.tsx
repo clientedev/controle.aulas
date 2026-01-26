@@ -98,6 +98,12 @@ export default function FrequencyRegistration() {
                 if (!cleanBase64.startsWith('data:')) {
                   cleanBase64 = `data:image/jpeg;base64,${cleanBase64}`;
                 }
+                
+                // Garantir que não estamos tentando carregar um data:, vazio
+                if (cleanBase64 === 'data:image/jpeg;base64,' || cleanBase64 === 'data:,') {
+                  continue;
+                }
+
                 studentImg = await faceapi.fetchImage(cleanBase64);
               } catch (imgErr) {
                 console.error("Erro ao carregar imagem base64:", imgErr);
