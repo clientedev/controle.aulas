@@ -152,7 +152,7 @@ export default function StudentsList() {
                       <TableCell className="font-mono">{student.matricula}</TableCell>
                       <TableCell className="font-medium">{student.nome}</TableCell>
                       <TableCell className="text-right">
-                        <Link href={`/students/${student.id}`}>
+                        <Link href={`/student/${student.id}`}>
                           <Button variant="ghost" size="icon" data-testid={`button-view-student-${student.id}`}>
                             <Eye className="h-4 w-4" />
                           </Button>

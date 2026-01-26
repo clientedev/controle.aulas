@@ -608,28 +608,6 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
                   </TableCell>
                 </TableRow>
               ))}
-            </TableBody>                <TableRow key={student.id}>
-                  <TableCell className="font-mono text-xs">{student.matricula}</TableCell>
-                  <TableCell className="font-medium">{student.nome}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{student.email || "-"}</TableCell>
-                  <TableCell className="text-right">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => {
-                        setEditingStudent(student);
-                        editForm.reset({
-                          nome: student.nome,
-                          email: student.email || "",
-                          matricula: student.matricula
-                        });
-                      }}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
             </TableBody>
           </Table>
         )}
