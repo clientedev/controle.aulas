@@ -387,39 +387,19 @@ export class DatabaseStorage implements IStorage {
         ));
 
       if (existe) {
-        // Tenta atualizar. Se as colunas não existirem, o catch lidará com isso.
-        try {
-          const [u] = await db.update(frequencia)
-            .set({ 
-              status: data.status,
-              horario: data.horario,
-              metodo: data.metodo
-            })
-            .where(eq(frequencia.id, existe.id))
-            .returning();
-          return u;
-        } catch (innerErr: any) {
-          // Fallback para esquema básico se colunas novas falharem
-          const [u] = await db.update(frequencia)
-            .set({ status: data.status })
-            .where(eq(frequencia.id, existe.id))
-            .returning();
-          return u;
-        }
+        const [u] = await db.update(frequencia)
+          .set({ status: data.status })
+          .where(eq(frequencia.id, existe.id))
+          .returning();
+        return u;
       } else {
-        try {
-          const [n] = await db.insert(frequencia).values(data).returning();
-          return n;
-        } catch (innerErr: any) {
-          // Fallback para inserção básica
-          const [n] = await db.insert(frequencia).values({
-            alunoId: data.alunoId,
-            turmaId: data.turmaId,
-            data: today,
-            status: data.status
-          }).returning();
-          return n;
-        }
+        const [n] = await db.insert(frequencia).values({
+          alunoId: data.alunoId,
+          turmaId: data.turmaId,
+          data: today,
+          status: data.status
+        }).returning();
+        return n;
       }
     } catch (error: any) {
       console.error("Erro crítico em registrarFrequencia:", error);
