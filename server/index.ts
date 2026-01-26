@@ -95,9 +95,15 @@ import { usuarios } from "@shared/schema";
   if (process.env.DATABASE_URL) {
     try {
       console.log("Railway: Syncing database schema...");
-      // Forçamos o push das tabelas antes de testar a conexão
+      const { execSync } = await import("child_process");
+      try {
+        execSync("npx drizzle-kit push --force", { stdio: "inherit" });
+        console.log("Railway: Schema sync completed successfully.");
+      } catch (pushErr) {
+        console.error("Railway: Schema sync FAILED, but attempting to continue:", pushErr);
+      }
     } catch (err) {
-      console.error("Database sync failed:", err);
+      console.error("Database sync module failed:", err);
     }
   }
 

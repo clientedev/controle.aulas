@@ -236,36 +236,46 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getNotasDoAluno(alunoId: number): Promise<(Nota & { avaliacao: Avaliacao; unidadeCurricular: UnidadeCurricular })[]> {
-    const resultados = await db.select({
-      nota: notas,
-      avaliacao: avaliacoes,
-      unidadeCurricular: unidadesCurriculares
-    })
-    .from(notas)
-    .innerJoin(avaliacoes, eq(notas.avaliacaoId, avaliacoes.id))
-    .innerJoin(unidadesCurriculares, eq(avaliacoes.unidadeCurricularId, unidadesCurriculares.id))
-    .where(eq(notas.alunoId, alunoId));
-    
-    return resultados.map(r => ({
-      ...r.nota,
-      avaliacao: r.avaliacao,
-      unidadeCurricular: r.unidadeCurricular
-    }));
+    try {
+      const resultados = await db.select({
+        nota: notas,
+        avaliacao: avaliacoes,
+        unidadeCurricular: unidadesCurriculares
+      })
+      .from(notas)
+      .innerJoin(avaliacoes, eq(notas.avaliacaoId, avaliacoes.id))
+      .innerJoin(unidadesCurriculares, eq(avaliacoes.unidadeCurricularId, unidadesCurriculares.id))
+      .where(eq(notas.alunoId, alunoId));
+      
+      return resultados.map(r => ({
+        ...r.nota,
+        avaliacao: r.avaliacao,
+        unidadeCurricular: r.unidadeCurricular
+      }));
+    } catch (error) {
+      console.error(`Erro ao buscar notas do aluno ${alunoId}:`, error);
+      return [];
+    }
   }
 
   async getFrequenciaDoAluno(alunoId: number): Promise<(Frequencia & { turma: Turma })[]> {
-    const resultados = await db.select({
-      frequencia: frequencia,
-      turma: turmas
-    })
-    .from(frequencia)
-    .innerJoin(turmas, eq(frequencia.turmaId, turmas.id))
-    .where(eq(frequencia.alunoId, alunoId));
-    
-    return resultados.map(r => ({
-      ...r.frequencia,
-      turma: r.turma
-    }));
+    try {
+      const resultados = await db.select({
+        frequencia: frequencia,
+        turma: turmas
+      })
+      .from(frequencia)
+      .innerJoin(turmas, eq(frequencia.turmaId, turmas.id))
+      .where(eq(frequencia.alunoId, alunoId));
+      
+      return resultados.map(r => ({
+        ...r.frequencia,
+        turma: r.turma
+      }));
+    } catch (error) {
+      console.error(`Erro ao buscar frequencia do aluno ${alunoId}:`, error);
+      return [];
+    }
   }
 
   async criarAluno(data: InsertAluno): Promise<Aluno> {

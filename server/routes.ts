@@ -166,11 +166,32 @@ export async function registerRoutes(
       }
       
       const aluno = await storage.getAluno(id);
-      if (!aluno) return res.status(404).json({ mensagem: "Aluno não encontrado" });
+      if (!aluno) {
+        console.error(`Aluno ID ${id} não encontrado no banco`);
+        return res.status(404).json({ mensagem: "Aluno não encontrado" });
+      }
 
-      const turmasMatriculadas = await storage.getTurmasDoAluno(id);
-      const notasAluno = await storage.getNotasDoAluno(id);
-      const frequenciaAluno = await storage.getFrequenciaDoAluno(id);
+      // Buscar dependências com logs individuais para identificar falhas
+      let turmasMatriculadas: any[] = [];
+      try {
+        turmasMatriculadas = await storage.getTurmasDoAluno(id);
+      } catch (e) {
+        console.error(`Erro ao buscar turmas do aluno ${id}:`, e);
+      }
+
+      let notasAluno: any[] = [];
+      try {
+        notasAluno = await storage.getNotasDoAluno(id);
+      } catch (e) {
+        console.error(`Erro ao buscar notas do aluno ${id}:`, e);
+      }
+
+      let frequenciaAluno: any[] = [];
+      try {
+        frequenciaAluno = await storage.getFrequenciaDoAluno(id);
+      } catch (e) {
+        console.error(`Erro ao buscar frequencia do aluno ${id}:`, e);
+      }
 
       res.json({
         ...aluno,
@@ -179,7 +200,7 @@ export async function registerRoutes(
         frequencia: frequenciaAluno
       });
     } catch (error) {
-      console.error(`Erro no endpoint /api/alunos/${req.params.id}:`, error);
+      console.error(`Erro CRÍTICO no endpoint /api/alunos/${req.params.id}:`, error);
       res.status(500).json({ mensagem: "Erro interno ao buscar dados do aluno" });
     }
   });
