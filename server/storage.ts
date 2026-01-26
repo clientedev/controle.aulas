@@ -283,7 +283,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async excluirAluno(id: number): Promise<void> {
-    await db.delete(alunos).where(eq(alunos.id, id));
+    try {
+      console.log(`Iniciando exclusão do aluno ${id} e todas as suas dependências...`);
+      
+      // Limpeza manual de dependências que podem causar erro 400 (Foreign Key Violation)
+      await db.execute(sql`DELETE FROM frequencia WHERE aluno_id = ${id}`);
+      await db.execute(sql`DELETE FROM notas WHERE aluno_id = ${id}`);
+      await db.execute(sql`DELETE FROM notas_criterios WHERE aluno_id = ${id}`);
+      await db.execute(sql`DELETE FROM criterios_atendidos WHERE aluno_id = ${id}`);
+      await db.execute(sql`DELETE FROM matriculas WHERE aluno_id = ${id}`);
+      await db.execute(sql`DELETE FROM fotos_alunos WHERE aluno_id = ${id}`);
+      
+      // Finalmente exclui o aluno
+      await db.delete(alunos).where(eq(alunos.id, id));
+      
+      console.log(`Aluno ${id} excluído com sucesso.`);
+    } catch (error) {
+      console.error(`Erro crítico ao excluir aluno ${id}:`, error);
+      throw error;
+    }
   }
 
   async matricularAluno(turmaId: number, alunoId: number): Promise<void> {
