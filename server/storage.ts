@@ -162,7 +162,36 @@ export class DatabaseStorage implements IStorage {
   }
 
   async excluirTurma(id: number): Promise<void> {
-    await db.delete(turmas).where(eq(turmas.id, id));
+    await db.transaction(async (tx) => {
+      // 1. Excluir atendimentos de critérios relacionados às UCs desta turma
+      const ucs = await tx.select().from(unidadesCurriculares).where(eq(unidadesCurriculares.turmaId, id));
+      for (const uc of ucs) {
+        const criterios = await tx.select().from(criteriosAvaliacao).where(eq(criteriosAvaliacao.unidadeCurricularId, uc.id));
+        for (const crit of criterios) {
+          await tx.delete(criteriosAtendidos).where(eq(criteriosAtendidos.criterioId, crit.id));
+        }
+        await tx.delete(criteriosAvaliacao).where(eq(criteriosAvaliacao.unidadeCurricularId, uc.id));
+        await tx.delete(notasCriterios).where(eq(notasCriterios.unidadeCurricularId, uc.id));
+        
+        // Excluir notas de avaliações desta UC
+        const avs = await tx.select().from(avaliacoes).where(eq(avaliacoes.unidadeCurricularId, uc.id));
+        for (const av of avs) {
+          await tx.delete(notas).where(eq(notas.avaliacaoId, av.id));
+        }
+        await tx.delete(avaliacoes).where(eq(avaliacoes.unidadeCurricularId, uc.id));
+      }
+
+      // 2. Excluir as UCs
+      await tx.delete(unidadesCurriculares).where(eq(unidadesCurriculares.turmaId, id));
+
+      // 3. Excluir outras dependências diretas
+      await tx.delete(matriculas).where(eq(matriculas.turmaId, id));
+      await tx.delete(horarios).where(eq(horarios.turmaId, id));
+      await tx.delete(frequencia).where(eq(frequencia.turmaId, id));
+
+      // 4. Por fim, excluir a turma
+      await tx.delete(turmas).where(eq(turmas.id, id));
+    });
   }
 
   async getUnidadesCurricularesDaTurma(turmaId: number): Promise<UnidadeCurricular[]> {

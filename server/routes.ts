@@ -287,6 +287,17 @@ export async function registerRoutes(
     res.json(history);
   });
 
+  app.delete("/api/turmas/:id", autenticar, async (req: any, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.excluirTurma(id);
+      res.status(204).end();
+    } catch (err) {
+      console.error("Erro ao excluir turma:", err);
+      res.status(400).json({ mensagem: "Erro ao excluir turma. Verifique se existem dependências." });
+    }
+  });
+
   // Object Storage Routes
   registerObjectStorageRoutes(app);
 
