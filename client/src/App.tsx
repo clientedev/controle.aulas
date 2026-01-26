@@ -114,8 +114,8 @@ function Router() {
       <Route path="/students">
         {(params) => <ProtectedRoute component={StudentsList} path="/students" {...params} />}
       </Route>
-      <Route path="/students/:id">
-        {(params) => <ProtectedRoute component={StudentProfile} path="/students/:id" {...params} />}
+      <Route path="/student/:id">
+        {(params) => <ProtectedRoute component={StudentProfile} path="/student/:id" {...params} />}
       </Route>
       <Route path="/frequency">
         {(params) => <ProtectedRoute component={FrequencyRegistration} path="/frequency" {...params} />}

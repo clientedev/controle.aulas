@@ -48,6 +48,8 @@ export interface IStorage {
   getTurmasDoAluno(alunoId: number): Promise<Turma[]>;
   getNotasDoAluno(alunoId: number): Promise<(Nota & { avaliacao: Avaliacao; unidadeCurricular: UnidadeCurricular })[]>;
   getFrequenciaDoAluno(alunoId: number): Promise<(Frequencia & { turma: Turma })[]>;
+  atualizarAluno(id: number, data: Partial<InsertAluno>): Promise<Aluno>;
+  excluirAluno(id: number): Promise<void>;
 
   // Avaliações
   getAvaliacoesDaTurma(turmaId: number): Promise<Avaliacao[]>;
@@ -292,7 +294,12 @@ export class DatabaseStorage implements IStorage {
 
   async atualizarAluno(id: number, data: Partial<InsertAluno>): Promise<Aluno> {
     const [updated] = await db.update(alunos).set(data).where(eq(alunos.id, id)).returning();
+    if (!updated) throw new Error("Aluno não encontrado");
     return updated;
+  }
+
+  async excluirAluno(id: number): Promise<void> {
+    await db.delete(alunos).where(eq(alunos.id, id));
   }
 
   async matricularAluno(turmaId: number, alunoId: number): Promise<void> {

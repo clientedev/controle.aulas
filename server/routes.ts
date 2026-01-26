@@ -226,6 +226,16 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/alunos/:id", autenticar, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.excluirAluno(id);
+      res.status(204).end();
+    } catch (err) {
+      res.status(400).json({ mensagem: "Erro ao excluir aluno" });
+    }
+  });
+
   app.post(api.alunos.matricular.path, autenticar, async (req: any, res) => {
     const turmaId = Number(req.params.id);
     const { alunoId } = req.body;

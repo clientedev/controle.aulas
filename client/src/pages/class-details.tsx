@@ -548,6 +548,68 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
               {enrolledStudents.map((student) => (
                 <TableRow key={student.id}>
                   <TableCell className="font-mono text-xs">{student.matricula}</TableCell>
+                  <TableCell>
+                    <Link href={`/student/${student.id}`} className="font-medium hover:underline text-primary">
+                      {student.nome}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{student.email || "-"}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => {
+                          setEditingStudent(student);
+                          editForm.reset({
+                            nome: student.nome,
+                            email: student.email || "",
+                            matricula: student.matricula
+                          });
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Excluir Aluno</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tem certeza que deseja excluir permanentemente o aluno {student.nome}? 
+                              Isso removerá todas as suas notas e registros de frequência em todas as turmas.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction 
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              onClick={async () => {
+                                try {
+                                  const res = await fetch(`/api/alunos/${student.id}`, { method: "DELETE" });
+                                  if (!res.ok) throw new Error();
+                                  queryClient.invalidateQueries({ queryKey: ["/api/turmas", classId] });
+                                  toast({ title: "Sucesso", description: "Aluno excluído com sucesso" });
+                                } catch (e) {
+                                  toast({ title: "Erro", description: "Falha ao excluir aluno", variant: "destructive" });
+                                }
+                              }}
+                            >
+                              Excluir
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>                <TableRow key={student.id}>
+                  <TableCell className="font-mono text-xs">{student.matricula}</TableCell>
                   <TableCell className="font-medium">{student.nome}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{student.email || "-"}</TableCell>
                   <TableCell className="text-right">
