@@ -422,15 +422,7 @@ export default function FrequencyRegistration() {
                     Ativar Câmera do Totem
                   </Button>
                 )}
-                {totemActive && (
-                  <Button 
-                    onClick={stopVideo} 
-                    variant="outline" 
-                    className="w-full h-12 rounded-xl border-destructive text-destructive hover:bg-destructive/10"
-                  >
-                    Encerrar Câmera
-                  </Button>
-                )}
+                {/* Botão Encerrar Câmera removido a pedido do usuário */}
               </div>
             )}
           </CardContent>
