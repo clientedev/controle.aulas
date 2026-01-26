@@ -27,6 +27,7 @@ export default function FrequencyRegistration() {
   const [descriptors, setDescriptors] = useState<{ alunoId: number; descriptor: Float32Array }[]>([]);
   const [isProcessingModels, setIsProcessingModels] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
+  const [totemActive, setTotemActive] = useState(false);
   const [lastAutoCapture, setLastAutoCapture] = useState<number>(0);
   const recognitionCooldown = 5000; // 5 segundos entre registros do mesmo rosto
 
@@ -136,24 +137,33 @@ export default function FrequencyRegistration() {
   }, [modelsLoaded, studentPhotos]);
 
   const startVideo = () => {
+    setTotemActive(true);
     setIsScanning(true);
+    setCapturedImage(null);
+    setRecognitionResult(null);
     navigator.mediaDevices.getUserMedia({ video: {} })
       .then((stream) => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
       })
-      .catch((err) => console.error(err));
+      .catch((err) => {
+        console.error(err);
+        setTotemActive(false);
+        setIsScanning(false);
+      });
   };
 
   const stopVideo = () => {
     setIsScanning(false);
+    setTotemActive(false);
     const stream = videoRef.current?.srcObject as MediaStream;
     stream?.getTracks().forEach(track => track.stop());
+    if (videoRef.current) videoRef.current.srcObject = null;
   };
 
   const handleCapture = async (auto = false) => {
-    if (!videoRef.current || !canvasRef.current || !students || descriptors.length === 0) {
+    if (!videoRef.current || !canvasRef.current || !students || descriptors.length === 0 || !isScanning) {
       if (!auto && descriptors.length === 0) {
         toast({
           title: "Aguarde",
@@ -401,22 +411,18 @@ export default function FrequencyRegistration() {
               </div>
             ) : (
               <div className="w-full">
-                {!isScanning && !capturedImage && (
+                {!totemActive && (
                   <Button onClick={startVideo} size="lg" className="w-full text-lg h-14 rounded-xl shadow-lg hover:scale-[1.02] transition-transform">
                     Ativar Câmera do Totem
                   </Button>
                 )}
-                {capturedImage && (
+                {totemActive && (
                   <Button 
-                    onClick={() => { 
-                      setCapturedImage(null); 
-                      setRecognitionResult(null); 
-                      startVideo(); 
-                    }} 
+                    onClick={stopVideo} 
                     variant="outline" 
-                    className="w-full h-12 rounded-xl"
+                    className="w-full h-12 rounded-xl border-destructive text-destructive hover:bg-destructive/10"
                   >
-                    Ativar Câmera
+                    Encerrar Câmera
                   </Button>
                 )}
               </div>
@@ -442,9 +448,15 @@ export default function FrequencyRegistration() {
                   PRESENÇA CONFIRMADA
                 </div>
                 
-                <p className="mt-8 text-sm text-muted-foreground animate-pulse">
-                  Reiniciando em instantes para o próximo aluno...
+                <p className="mt-8 text-sm text-muted-foreground">
+                  Sistema pronto para o próximo aluno.
                 </p>
+                <Button 
+                  onClick={startVideo}
+                  className="mt-4 w-full h-12 rounded-xl"
+                >
+                  Ativar Totem Novamente
+                </Button>
               </div>
             ) : capturedImage ? (
               <div className="space-y-4">
