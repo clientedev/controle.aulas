@@ -222,6 +222,7 @@ export default function FrequencyRegistration() {
         // Aluno identificado
         setCapturedImage(base64Image);
         stopVideo(); // Fecha a câmera imediatamente após o reconhecimento
+        setIsScanning(false); // Garante que o estado de scanning seja falso
         
         setLastAutoCapture(Date.now());
         setRecognitionResult({ aluno: bestMatch.student, distance: minDistance });
@@ -308,12 +309,8 @@ export default function FrequencyRegistration() {
         queryKey: ["/api/turmas", variables.turmaId, "frequencia"] 
       });
       
-      console.log("Totem: Sucesso no registro. Limpando estado em 3 segundos...");
-      setTimeout(() => {
-        setCapturedImage(null);
-        setRecognitionResult(null);
-        startVideo();
-      }, 3000);
+      console.log("Totem: Sucesso no registro. Aguardando ação do usuário...");
+      // Removido o timeout que reiniciava a câmera automaticamente
     },
     onError: (error: any) => {
       console.error("Totem: Erro ao registrar:", error);
@@ -322,7 +319,7 @@ export default function FrequencyRegistration() {
         description: "Não foi possível salvar a presença no banco de dados.",
         variant: "destructive"
       });
-      // Permite tentar novamente após erro
+      // Permite tentar novamente após erro (pode manter o reset aqui se desejar, mas seguindo a lógica de manual)
       setTimeout(() => {
         setCapturedImage(null);
         setRecognitionResult(null);
@@ -410,8 +407,16 @@ export default function FrequencyRegistration() {
                   </Button>
                 )}
                 {capturedImage && (
-                  <Button onClick={() => { setCapturedImage(null); setRecognitionResult(null); startVideo(); }} variant="outline" className="w-full h-12 rounded-xl">
-                    Próximo Aluno
+                  <Button 
+                    onClick={() => { 
+                      setCapturedImage(null); 
+                      setRecognitionResult(null); 
+                      startVideo(); 
+                    }} 
+                    variant="outline" 
+                    className="w-full h-12 rounded-xl"
+                  >
+                    Ativar Câmera
                   </Button>
                 )}
               </div>
