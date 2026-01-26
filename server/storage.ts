@@ -392,27 +392,32 @@ export class DatabaseStorage implements IStorage {
   }
 
   async registrarFrequencia(data: InsertFrequencia): Promise<Frequencia> {
-    const today = data.data;
-    const [existe] = await db.select().from(frequencia)
-      .where(and(
-        eq(frequencia.turmaId, data.turmaId),
-        eq(frequencia.alunoId, data.alunoId),
-        eq(frequencia.data, today)
-      ));
+    try {
+      const today = data.data;
+      const [existe] = await db.select().from(frequencia)
+        .where(and(
+          eq(frequencia.turmaId, data.turmaId),
+          eq(frequencia.alunoId, data.alunoId),
+          eq(frequencia.data, today)
+        ));
 
-    if (existe) {
-      const [u] = await db.update(frequencia)
-        .set({ 
-          status: data.status,
-          horario: data.horario || existe.horario,
-          metodo: data.metodo || existe.metodo
-        })
-        .where(eq(frequencia.id, existe.id))
-        .returning();
-      return u;
-    } else {
-      const [n] = await db.insert(frequencia).values(data).returning();
-      return n;
+      if (existe) {
+        const [u] = await db.update(frequencia)
+          .set({ 
+            status: data.status,
+            horario: data.horario || existe.horario,
+            metodo: data.metodo || existe.metodo
+          })
+          .where(eq(frequencia.id, existe.id))
+          .returning();
+        return u;
+      } else {
+        const [n] = await db.insert(frequencia).values(data).returning();
+        return n;
+      }
+    } catch (error) {
+      console.error("Erro em registrarFrequencia:", error);
+      throw error;
     }
   }
 

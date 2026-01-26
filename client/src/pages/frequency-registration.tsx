@@ -231,12 +231,17 @@ export default function FrequencyRegistration() {
       if (bestMatch && minDistance < 0.6) { // Limiar padrão recomendado para face-api.js
         // Aluno identificado
         setCapturedImage(base64Image);
-        stopVideo(); // Fecha a câmera imediatamente após o reconhecimento
-        setIsScanning(false); // Garante que o estado de scanning seja falso
-        setTotemActive(false); // Encerra o estado ativo do totem para fechar a câmera
         
+        // Cooldown e flag para evitar múltiplos registros
         setLastAutoCapture(Date.now());
         setRecognitionResult({ aluno: bestMatch.student, distance: minDistance });
+        
+        // ENCERRAR CÂMERA IMEDIATAMENTE
+        const stream = videoRef.current?.srcObject as MediaStream;
+        stream?.getTracks().forEach(track => track.stop());
+        if (videoRef.current) videoRef.current.srcObject = null;
+        setIsScanning(false);
+        setTotemActive(false);
         
         // Registrar presença
         const now = new Date();
