@@ -162,11 +162,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   async excluirTurma(id: number): Promise<void> {
-    // Com ON DELETE CASCADE no banco, só precisamos excluir a turma pai
-    const [deleted] = await db.delete(turmas).where(eq(turmas.id, id)).returning();
-    if (!deleted) {
-      throw new Error(`Turma ${id} não encontrada para exclusão.`);
-    }
+    await db.transaction(async (tx) => {
+      // Garantir limpeza manual mesmo com CASCADE para evitar erros de transação
+      const ucs = await tx.select().from(unidadesCurriculares).where(eq(unidadesCurriculares.turmaId, id));
+      for (const uc of ucs) {
+        await tx.delete(notasCriterios).where(eq(notasCriterios.unidadeCurricularId, uc.id));
+        const criterios = await tx.select().from(criteriosAvaliacao).where(eq(criteriosAvaliacao.unidadeCurricularId, uc.id));
+        for (const crit of criterios) {
+          await tx.delete(criteriosAtendidos).where(eq(criteriosAtendidos.criterioId, crit.id));
+        }
+        await tx.delete(criteriosAvaliacao).where(eq(criteriosAvaliacao.unidadeCurricularId, uc.id));
+        const avs = await tx.select().from(avaliacoes).where(eq(avaliacoes.unidadeCurricularId, uc.id));
+        for (const av of avs) {
+          await tx.delete(notas).where(eq(notas.avaliacaoId, av.id));
+        }
+        await tx.delete(avaliacoes).where(eq(avaliacoes.unidadeCurricularId, uc.id));
+      }
+      await tx.delete(unidadesCurriculares).where(eq(unidadesCurriculares.turmaId, id));
+      await tx.delete(matriculas).where(eq(matriculas.turmaId, id));
+      await tx.delete(horarios).where(eq(horarios.turmaId, id));
+      await tx.delete(frequencia).where(eq(frequencia.turmaId, id));
+      await tx.delete(turmas).where(eq(turmas.id, id));
+    });
   }
 
   async getUnidadesCurricularesDaTurma(turmaId: number): Promise<UnidadeCurricular[]> {
