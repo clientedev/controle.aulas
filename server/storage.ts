@@ -202,7 +202,11 @@ export class DatabaseStorage implements IStorage {
 
   async getAluno(id: number): Promise<Aluno | undefined> {
     try {
+      console.log(`Buscando aluno no banco com ID: ${id} (tipo: ${typeof id})`);
       const [aluno] = await db.select().from(alunos).where(eq(alunos.id, id));
+      if (!aluno) {
+        console.warn(`Nenhum aluno encontrado no banco para o ID: ${id}`);
+      }
       return aluno;
     } catch (error) {
       console.error(`Erro ao buscar aluno ${id} no storage:`, error);
@@ -219,10 +223,11 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(turmas, eq(matriculas.turmaId, turmas.id))
       .where(eq(matriculas.alunoId, alunoId));
       
+      console.log(`Turmas encontradas para o aluno ${alunoId}: ${resultados.length}`);
       return resultados.map(r => r.turma);
     } catch (error) {
       console.error(`Erro ao buscar turmas do aluno ${alunoId}:`, error);
-      return []; // Retorna array vazio em vez de explodir
+      return [];
     }
   }
 
@@ -295,9 +300,13 @@ export class DatabaseStorage implements IStorage {
       await db.execute(sql`DELETE FROM fotos_alunos WHERE aluno_id = ${id}`);
       
       // Finalmente exclui o aluno
-      await db.delete(alunos).where(eq(alunos.id, id));
+      const result = await db.delete(alunos).where(eq(alunos.id, id)).returning();
       
-      console.log(`Aluno ${id} excluído com sucesso.`);
+      if (result.length === 0) {
+        console.warn(`Tentativa de excluir aluno inexistente: ${id}`);
+      } else {
+        console.log(`Aluno ${id} excluído com sucesso.`);
+      }
     } catch (error) {
       console.error(`Erro crítico ao excluir aluno ${id}:`, error);
       throw error;

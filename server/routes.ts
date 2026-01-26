@@ -160,7 +160,9 @@ export async function registerRoutes(
 
   app.get("/api/alunos/:id", autenticar, async (req, res) => {
     try {
-      const id = Number(req.params.id);
+      const id = parseInt(req.params.id, 10);
+      console.log(`Requisição GET /api/alunos/${req.params.id} -> ID processado: ${id}`);
+      
       if (isNaN(id)) {
         return res.status(400).json({ mensagem: "ID de aluno inválido" });
       }
@@ -228,11 +230,18 @@ export async function registerRoutes(
 
   app.delete("/api/alunos/:id", autenticar, async (req, res) => {
     try {
-      const id = Number(req.params.id);
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ mensagem: "ID de aluno inválido" });
+      }
       await storage.excluirAluno(id);
       res.status(204).end();
-    } catch (err) {
-      res.status(400).json({ mensagem: "Erro ao excluir aluno" });
+    } catch (err: any) {
+      console.error("Erro ao excluir aluno:", err);
+      res.status(400).json({ 
+        mensagem: "Erro ao excluir aluno.",
+        detalhes: err.message 
+      });
     }
   });
 
