@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { eq, and, sql } from "drizzle-orm";
+import { format } from "date-fns";
 import {
   usuarios, turmas, alunos, matriculas, avaliacoes, notas, horarios, frequencia, unidadesCurriculares, fotosAlunos,
   criteriosAvaliacao, criteriosAtendidos, notasCriterios,
