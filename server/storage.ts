@@ -166,12 +166,14 @@ export class DatabaseStorage implements IStorage {
       // 1. Excluir atendimentos de critérios relacionados às UCs desta turma
       const ucs = await tx.select().from(unidadesCurriculares).where(eq(unidadesCurriculares.turmaId, id));
       for (const uc of ucs) {
+        // Excluir notas de critérios desta UC
+        await tx.delete(notasCriterios).where(eq(notasCriterios.unidadeCurricularId, uc.id));
+
         const criterios = await tx.select().from(criteriosAvaliacao).where(eq(criteriosAvaliacao.unidadeCurricularId, uc.id));
         for (const crit of criterios) {
           await tx.delete(criteriosAtendidos).where(eq(criteriosAtendidos.criterioId, crit.id));
         }
         await tx.delete(criteriosAvaliacao).where(eq(criteriosAvaliacao.unidadeCurricularId, uc.id));
-        await tx.delete(notasCriterios).where(eq(notasCriterios.unidadeCurricularId, uc.id));
         
         // Excluir notas de avaliações desta UC
         const avs = await tx.select().from(avaliacoes).where(eq(avaliacoes.unidadeCurricularId, uc.id));
@@ -208,19 +210,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAluno(id: number): Promise<Aluno | undefined> {
-    const [aluno] = await db.select().from(alunos).where(eq(alunos.id, id));
-    return aluno;
+    try {
+      const [aluno] = await db.select().from(alunos).where(eq(alunos.id, id));
+      return aluno;
+    } catch (error) {
+      console.error(`Erro ao buscar aluno ${id} no storage:`, error);
+      throw error;
+    }
   }
 
   async getTurmasDoAluno(alunoId: number): Promise<Turma[]> {
-    const resultados = await db.select({
-      turma: turmas
-    })
-    .from(matriculas)
-    .innerJoin(turmas, eq(matriculas.turmaId, turmas.id))
-    .where(eq(matriculas.alunoId, alunoId));
-    
-    return resultados.map(r => r.turma);
+    try {
+      const resultados = await db.select({
+        turma: turmas
+      })
+      .from(matriculas)
+      .innerJoin(turmas, eq(matriculas.turmaId, turmas.id))
+      .where(eq(matriculas.alunoId, alunoId));
+      
+      return resultados.map(r => r.turma);
+    } catch (error) {
+      console.error(`Erro ao buscar turmas do aluno ${alunoId}:`, error);
+      return []; // Retorna array vazio em vez de explodir
+    }
   }
 
   async getNotasDoAluno(alunoId: number): Promise<(Nota & { avaliacao: Avaliacao; unidadeCurricular: UnidadeCurricular })[]> {
