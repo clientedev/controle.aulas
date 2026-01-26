@@ -95,7 +95,7 @@ export default function StudentProfile() {
 
   const calcularFrequencia = () => {
     if (!aluno?.frequencia.length) return null;
-    const presencas = aluno.frequencia.filter(f => f.status === "presente").length;
+    const presencas = aluno.frequencia.filter(f => f.status === 1).length;
     return ((presencas / aluno.frequencia.length) * 100).toFixed(0);
   };
 
@@ -380,9 +380,9 @@ export default function StudentProfile() {
                       <p className="text-xs text-muted-foreground">{freq.turma.nome}</p>
                     </div>
                     <Badge 
-                      variant={freq.status === "presente" ? "default" : freq.status === "atraso" ? "secondary" : "destructive"}
+                      variant={freq.status === 1 ? "default" : freq.status === 2 ? "secondary" : "destructive"}
                     >
-                      {freq.status === "presente" ? "Presente" : freq.status === "atraso" ? "Atraso" : "Falta"}
+                      {freq.status === 1 ? "Presente" : freq.status === 2 ? "Atraso" : "Falta"}
                     </Badge>
                   </div>
                 ))}

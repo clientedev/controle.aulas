@@ -109,8 +109,8 @@ export default function FrequencyRegistration() {
               continue;
             }
 
-            // Usar TinyFaceDetector com configurações ultra rápidas
-            const detection = await faceapi.detectSingleFace(studentImg, new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.5 })).withFaceLandmarks().withFaceDescriptor();
+            // Usar TinyFaceDetector com configurações equilibradas
+            const detection = await faceapi.detectSingleFace(studentImg, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 })).withFaceLandmarks().withFaceDescriptor();
             if (detection) {
               const descriptorArray = Array.from(detection.descriptor);
               if (cacheKey) cacheData[cacheKey] = descriptorArray;
@@ -119,6 +119,7 @@ export default function FrequencyRegistration() {
                 alunoId: photo.alunoId,
                 descriptor: detection.descriptor
               });
+              console.log(`Totem: Descriptor gerado para aluno ${photo.alunoId} (${photo.studentName})`);
             }
           } catch (e) {
             console.error("Error processing photo for descriptor", e);
@@ -128,6 +129,7 @@ export default function FrequencyRegistration() {
         localStorage.setItem("face_descriptors_cache", JSON.stringify(cacheData));
         setDescriptors(loadedDescriptors);
         setIsProcessingModels(false);
+        console.log(`Totem: Processamento concluído. ${loadedDescriptors.length} faces carregadas.`);
       };
       processDescriptors();
     }
@@ -179,8 +181,8 @@ export default function FrequencyRegistration() {
 
     try {
       const input = await faceapi.fetchImage(base64Image);
-      // Configurações agressivas de velocidade: inputSize menor (128) e apenas os modelos necessários
-      const detection = await faceapi.detectSingleFace(input, new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.5 }))
+      // Configurações equilibradas para precisão e velocidade
+      const detection = await faceapi.detectSingleFace(input, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
         .withFaceLandmarks()
         .withFaceDescriptor();
 
@@ -196,10 +198,12 @@ export default function FrequencyRegistration() {
       }
 
       let bestMatch: { student: Aluno; distance: number } | null = null;
-      let minDistance = 0.6;
+      let minDistance = 0.6; // Limiar padrão para face-api.js
 
       for (const item of descriptors) {
         const distance = faceapi.euclideanDistance(detection.descriptor, item.descriptor);
+        // Log para debug opcional se necessário
+        // console.log(`Distance to ${item.alunoId}: ${distance}`);
         if (distance < minDistance) {
           minDistance = distance;
           const student = students.find(s => s.id === item.alunoId);
@@ -209,10 +213,12 @@ export default function FrequencyRegistration() {
         }
       }
 
-      const similarity = Math.max(0, 1 - minDistance);
-      const matchPercentage = similarity * 100;
+      // Cálculo de confiança baseado no limiar de 0.6
+      // Se minDistance for 0.6, confiança é 0% (no limite)
+      // Se minDistance for 0, confiança é 100%
+      const confidence = Math.max(0, (0.6 - minDistance) / 0.6) * 100;
 
-      if (bestMatch && matchPercentage >= 70) {
+      if (bestMatch && minDistance < 0.6) { // Limiar padrão recomendado para face-api.js
         // Aluno identificado
         setCapturedImage(base64Image);
         stopVideo(); // Fecha a câmera imediatamente após o reconhecimento
@@ -225,12 +231,12 @@ export default function FrequencyRegistration() {
         const deviceTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         const deviceDate = now.toISOString().split('T')[0];
 
-        console.log("Totem: Aluno identificado:", bestMatch.student.nome);
+        console.log("Totem: Aluno identificado:", bestMatch.student.nome, "Distância:", minDistance.toFixed(4));
         console.log("Totem: Registrando para data:", deviceDate, "horário:", deviceTime);
 
         registerPresenceMutation.mutate({
           alunoId: bestMatch.student.id,
-          status: 1,
+          status: 1, // 1: presente (conforme definido no schema integer)
           horario: deviceTime,
           data: deviceDate,
           metodo: "facial"
@@ -424,7 +430,8 @@ export default function FrequencyRegistration() {
                   <CheckCircle className="h-16 w-16 text-green-600" />
                 </div>
                 <h3 className="text-3xl font-bold text-primary mb-2 uppercase">{recognitionResult.aluno.nome}</h3>
-                <p className="text-xl text-muted-foreground mb-6">RA: {recognitionResult.aluno.matricula}</p>
+                <p className="text-xl text-muted-foreground mb-2">RA: {recognitionResult.aluno.matricula}</p>
+                <p className="text-xs text-muted-foreground mb-6">Confiança: {Math.round((0.6 - recognitionResult.distance) / 0.6 * 100)}%</p>
                 
                 <div className="inline-block px-6 py-3 bg-primary text-white rounded-2xl text-lg font-bold shadow-md">
                   PRESENÇA CONFIRMADA
