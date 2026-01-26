@@ -233,6 +233,7 @@ export default function FrequencyRegistration() {
         setCapturedImage(base64Image);
         stopVideo(); // Fecha a câmera imediatamente após o reconhecimento
         setIsScanning(false); // Garante que o estado de scanning seja falso
+        setTotemActive(false); // Encerra o estado ativo do totem para fechar a câmera
         
         setLastAutoCapture(Date.now());
         setRecognitionResult({ aluno: bestMatch.student, distance: minDistance });
