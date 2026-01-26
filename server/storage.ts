@@ -479,7 +479,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCriteriosDaUC(ucId: number): Promise<CriterioAvaliacao[]> {
-    return await db.select().from(criteriosAvaliacao).where(eq(criteriosAvaliacao.unidadeCurricularId, ucId));
+    try {
+      if (!ucId || isNaN(ucId)) return [];
+      const results = await db.select().from(criteriosAvaliacao).where(eq(criteriosAvaliacao.unidadeCurricularId, ucId));
+      return results || [];
+    } catch (error) {
+      console.error(`Erro ao buscar critérios da UC ${ucId}:`, error);
+      return [];
+    }
   }
 
   async criarCriterio(data: InsertCriterioAvaliacao): Promise<CriterioAvaliacao> {

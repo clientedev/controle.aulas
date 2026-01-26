@@ -252,7 +252,9 @@ export default function ClassDetails() {
           </TabsContent>
 
           <TabsContent value="unidades" className="animate-in fade-in-50 slide-in-from-bottom-2 duration-300">
-            <UnidadesTab classId={classId} unidades={classData.unidadesCurriculares || []} />
+            {classData.unidadesCurriculares && (
+              <UnidadesTab classId={classId} unidades={classData.unidadesCurriculares} />
+            )}
           </TabsContent>
 
           <TabsContent value="evaluations" className="animate-in fade-in-50 slide-in-from-bottom-2 duration-300">
