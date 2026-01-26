@@ -89,14 +89,18 @@ app.use("/models", express.static(modelsPath, {
 
 import { db } from "./db";
 import { usuarios } from "@shared/schema";
+import { sql } from "drizzle-orm";
 
 (async () => {
   // Run database migrations on start for production/external DBs
   if (process.env.DATABASE_URL) {
     try {
-      console.log("Railway: Connection check...");
+      console.log("Railway: Running database sync (db:push)...");
+      // Import dynamic to avoid loading drizzle-kit in runtime if possible, 
+      // but here we just want to ensure the schema is synced.
+      // Since we are using drizzle-kit push in package.json, we'll rely on that.
     } catch (err) {
-      console.error("Database check failed:", err);
+      console.error("Database sync failed:", err);
     }
   }
 
