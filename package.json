@@ -12,7 +12,8 @@
     "db:push:force": "drizzle-kit push --force",
     "db:migrate": "drizzle-kit push --force",
     "deploy:railway": "npm run build && npx drizzle-kit push --force",
-    "prestart": "npx drizzle-kit push --force"
+    "prestart": "npx drizzle-kit push --force",
+    "start": "NODE_ENV=production npx drizzle-kit push --force && node --max-old-space-size=450 dist/index.cjs"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.18.0",
