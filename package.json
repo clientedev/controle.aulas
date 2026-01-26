@@ -6,14 +6,13 @@
   "scripts": {
     "dev": "NODE_ENV=development tsx server/index.ts",
     "build": "tsx script/build.ts",
-    "start": "NODE_ENV=production node --max-old-space-size=450 dist/index.cjs",
+    "start": "NODE_ENV=production npx drizzle-kit push --force && node --max-old-space-size=450 dist/index.cjs",
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "db:push:force": "drizzle-kit push --force",
     "db:migrate": "drizzle-kit push --force",
     "deploy:railway": "bash script/railway-deploy.sh",
-    "prestart": "npx drizzle-kit push --force",
-    "start": "NODE_ENV=production npx drizzle-kit push --force && node --max-old-space-size=450 dist/index.cjs"
+    "prestart": "npx drizzle-kit push --force"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.18.0",
