@@ -147,7 +147,7 @@ import { usuarios } from "@shared/schema";
     db.select().from(usuarios).limit(1).then(() => {
       console.log("Railway: Database connection successful.");
     }).catch(err => {
-      console.error("Railway: Database connection FAILED. This might cause issues with data-driven routes:", err);
+      console.error("Railway: Database connection FAILED:", err.message);
     });
   }
   
