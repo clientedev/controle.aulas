@@ -229,38 +229,39 @@ export default function FrequencyRegistration() {
       const confidence = Math.max(0, (0.6 - minDistance) / 0.6) * 100;
 
       if (bestMatch && minDistance < 0.6) { // Limiar padrão recomendado para face-api.js
-        // Aluno identificado
-        setCapturedImage(base64Image);
+        console.log("Totem: Aluno identificado!", bestMatch.student.nome);
         
-        // Cooldown e flag para evitar múltiplos registros
-        setLastAutoCapture(Date.now());
-        setRecognitionResult({ aluno: bestMatch.student, distance: minDistance });
-        
-        // ENCERRAR CÂMERA IMEDIATAMENTE
-        const stream = videoRef.current?.srcObject as MediaStream;
-        stream?.getTracks().forEach(track => track.stop());
-        if (videoRef.current) videoRef.current.srcObject = null;
-        setIsScanning(false);
-        setTotemActive(false);
-        
-        // Registrar presença
+        // Registrar presença PRIMEIRO
         const now = new Date();
         const deviceTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         const deviceDate = now.toISOString().split('T')[0];
 
-        console.log("Totem: Aluno identificado:", bestMatch.student.nome, "Distância:", minDistance.toFixed(4));
-        console.log("Totem: Registrando para data:", deviceDate, "horário:", deviceTime);
-
         registerPresenceMutation.mutate({
           alunoId: bestMatch.student.id,
-          status: 1, // 1: presente (conforme definido no schema integer)
+          status: 1, 
           horario: deviceTime,
           data: deviceDate,
           metodo: "facial"
         });
 
-        // NÃO reinicia a busca automática automaticamente para fechar a câmera
-        // O usuário precisará clicar em "Próximo Aluno"
+        // 1. Atualizar UI
+        setCapturedImage(base64Image);
+        setRecognitionResult({ aluno: bestMatch.student, distance: minDistance });
+        setLastAutoCapture(Date.now());
+        
+        // 2. PARAR TUDO (Câmera e Scanning)
+        setIsScanning(false);
+        setTotemActive(false);
+        
+        // 3. Forçar parada dos tracks do stream
+        if (videoRef.current && videoRef.current.srcObject) {
+          const stream = videoRef.current.srcObject as MediaStream;
+          stream.getTracks().forEach(track => {
+            console.log("Totem: Parando track", track.kind);
+            track.stop();
+          });
+          videoRef.current.srcObject = null;
+        }
       }
     } catch (err) {
       console.error(err);
