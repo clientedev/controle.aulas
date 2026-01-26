@@ -162,43 +162,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async excluirTurma(id: number): Promise<void> {
-    await db.transaction(async (tx) => {
-      // 1. Buscar todas as UCs da turma para limpar dependências profundas
-      const ucs = await tx.select().from(unidadesCurriculares).where(eq(unidadesCurriculares.turmaId, id));
-      
-      for (const uc of ucs) {
-        // A. Limpar notas por critérios (dependem da UC e do Aluno)
-        await tx.delete(notasCriterios).where(eq(notasCriterios.unidadeCurricularId, uc.id));
-
-        // B. Buscar critérios para limpar atendimentos
-        const criterios = await tx.select().from(criteriosAvaliacao).where(eq(criteriosAvaliacao.unidadeCurricularId, uc.id));
-        for (const crit of criterios) {
-          await tx.delete(criteriosAtendidos).where(eq(criteriosAtendidos.criterioId, crit.id));
-        }
-        // C. Agora sim excluir os critérios
-        await tx.delete(criteriosAvaliacao).where(eq(criteriosAvaliacao.unidadeCurricularId, uc.id));
-        
-        // D. Buscar avaliações para limpar as notas individuais
-        const avs = await tx.select().from(avaliacoes).where(eq(avaliacoes.unidadeCurricularId, uc.id));
-        for (const av of avs) {
-          await tx.delete(notas).where(eq(notas.avaliacaoId, av.id));
-        }
-        // E. Agora sim excluir as avaliações
-        await tx.delete(avaliacoes).where(eq(avaliacoes.unidadeCurricularId, uc.id));
-      }
-
-      // 2. Limpar dependências diretas da Turma
-      await tx.delete(unidadesCurriculares).where(eq(unidadesCurriculares.turmaId, id));
-      await tx.delete(matriculas).where(eq(matriculas.turmaId, id));
-      await tx.delete(horarios).where(eq(horarios.turmaId, id));
-      await tx.delete(frequencia).where(eq(frequencia.turmaId, id));
-
-      // 3. Por fim, excluir a turma
-      const [deleted] = await tx.delete(turmas).where(eq(turmas.id, id)).returning();
-      if (!deleted) {
-        throw new Error(`Turma ${id} não encontrada para exclusão.`);
-      }
-    });
+    // Com ON DELETE CASCADE no banco, só precisamos excluir a turma pai
+    const [deleted] = await db.delete(turmas).where(eq(turmas.id, id)).returning();
+    if (!deleted) {
+      throw new Error(`Turma ${id} não encontrada para exclusão.`);
+    }
   }
 
   async getUnidadesCurricularesDaTurma(turmaId: number): Promise<UnidadeCurricular[]> {

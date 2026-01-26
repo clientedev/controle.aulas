@@ -94,10 +94,7 @@ import { usuarios } from "@shared/schema";
   // Run database migrations on start for production/external DBs
   if (process.env.DATABASE_URL) {
     try {
-      console.log("Railway: Checking database schema...");
-      // Apenas fazemos push se houver mudanças detectadas ou se estiver em dev
-      // No Railway, o db:push pode ser lento no startup.
-      // Vamos tentar otimizar removendo o --force se não for estritamente necessário ou movendo para prestart real
+      console.log("Railway: Connection check...");
     } catch (err) {
       console.error("Database check failed:", err);
     }

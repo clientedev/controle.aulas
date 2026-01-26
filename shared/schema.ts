@@ -20,13 +20,13 @@ export const turmas = pgTable("turmas", {
   nome: text("nome").notNull(), // ex: "Turma A - 2024"
   ano: integer("ano").notNull(),
   semestre: integer("semestre").notNull(), // 1 ou 2
-  professorId: integer("professor_id").references(() => usuarios.id).notNull(),
+  professorId: integer("professor_id").references(() => usuarios.id, { onDelete: "cascade" }).notNull(),
 });
 
 export const unidadesCurriculares = pgTable("unidades_curriculares", {
   id: serial("id").primaryKey(),
   nome: text("nome").notNull(),
-  turmaId: integer("turma_id").references(() => turmas.id).notNull(),
+  turmaId: integer("turma_id").references(() => turmas.id, { onDelete: "cascade" }).notNull(),
 });
 
 export const alunos = pgTable("alunos", {
@@ -38,13 +38,13 @@ export const alunos = pgTable("alunos", {
 
 export const matriculas = pgTable("matriculas", {
   id: serial("id").primaryKey(),
-  turmaId: integer("turma_id").references(() => turmas.id).notNull(),
-  alunoId: integer("aluno_id").references(() => alunos.id).notNull(),
+  turmaId: integer("turma_id").references(() => turmas.id, { onDelete: "cascade" }).notNull(),
+  alunoId: integer("aluno_id").references(() => alunos.id, { onDelete: "cascade" }).notNull(),
 });
 
 export const avaliacoes = pgTable("avaliacoes", {
   id: serial("id").primaryKey(),
-  unidadeCurricularId: integer("unidade_curricular_id").references(() => unidadesCurriculares.id).notNull(),
+  unidadeCurricularId: integer("unidade_curricular_id").references(() => unidadesCurriculares.id, { onDelete: "cascade" }).notNull(),
   nome: text("nome").notNull(), // ex: "Prova 1", "Trabalho Final"
   notaMaxima: doublePrecision("nota_maxima").notNull().default(10.0),
   peso: doublePrecision("peso").default(1.0),
@@ -52,29 +52,29 @@ export const avaliacoes = pgTable("avaliacoes", {
 
 export const criteriosAvaliacao = pgTable("criterios_avaliacao", {
   id: serial("id").primaryKey(),
-  unidadeCurricularId: integer("unidade_curricular_id").references(() => unidadesCurriculares.id).notNull(),
+  unidadeCurricularId: integer("unidade_curricular_id").references(() => unidadesCurriculares.id, { onDelete: "cascade" }).notNull(),
   descricao: text("descricao").notNull(),
   peso: doublePrecision("peso").notNull().default(1.0),
 });
 
 export const criteriosAtendidos = pgTable("criterios_atendidos", {
   id: serial("id").primaryKey(),
-  alunoId: integer("aluno_id").references(() => alunos.id).notNull(),
-  criterioId: integer("criterio_id").references(() => criteriosAvaliacao.id).notNull(),
+  alunoId: integer("aluno_id").references(() => alunos.id, { onDelete: "cascade" }).notNull(),
+  criterioId: integer("criterio_id").references(() => criteriosAvaliacao.id, { onDelete: "cascade" }).notNull(),
   atendido: integer("atendido").notNull().default(0), // 0: não, 1: sim
 });
 
 export const notasCriterios = pgTable("notas_criterios", {
   id: serial("id").primaryKey(),
-  alunoId: integer("aluno_id").references(() => alunos.id).notNull(),
-  unidadeCurricularId: integer("unidade_curricular_id").references(() => unidadesCurriculares.id).notNull(),
+  alunoId: integer("aluno_id").references(() => alunos.id, { onDelete: "cascade" }).notNull(),
+  unidadeCurricularId: integer("unidade_curricular_id").references(() => unidadesCurriculares.id, { onDelete: "cascade" }).notNull(),
   aproveitamento: doublePrecision("aproveitamento").notNull(), // Porcentagem (ex: 0.70 para 70%)
 });
 
 export const notas = pgTable("notas", {
   id: serial("id").primaryKey(),
-  avaliacaoId: integer("avaliacao_id").references(() => avaliacoes.id).notNull(),
-  alunoId: integer("aluno_id").references(() => alunos.id).notNull(),
+  avaliacaoId: integer("avaliacao_id").references(() => avaliacoes.id, { onDelete: "cascade" }).notNull(),
+  alunoId: integer("aluno_id").references(() => alunos.id, { onDelete: "cascade" }).notNull(),
   valor: doublePrecision("valor").notNull(),
 });
 
@@ -161,7 +161,7 @@ export const notasCriteriosRelations = relations(notasCriterios, ({ one }) => ({
 
 export const horarios = pgTable("horarios", {
   id: serial("id").primaryKey(),
-  turmaId: integer("turma_id").references(() => turmas.id).notNull(),
+  turmaId: integer("turma_id").references(() => turmas.id, { onDelete: "cascade" }).notNull(),
   diaSemana: integer("dia_semana").notNull(), // 0-6 (dom-sab)
   horarioInicio: text("horario_inicio").notNull(), // HH:mm
   horarioFim: text("horario_fim").notNull(), // HH:mm
@@ -169,8 +169,8 @@ export const horarios = pgTable("horarios", {
 
 export const frequencia = pgTable("frequencia", {
   id: serial("id").primaryKey(),
-  alunoId: integer("aluno_id").references(() => alunos.id).notNull(),
-  turmaId: integer("turma_id").references(() => turmas.id).notNull(),
+  alunoId: integer("aluno_id").references(() => alunos.id, { onDelete: "cascade" }).notNull(),
+  turmaId: integer("turma_id").references(() => turmas.id, { onDelete: "cascade" }).notNull(),
   data: text("data").notNull(), // YYYY-MM-DD
   status: integer("status").notNull().default(1), // 0: falta, 1: presente
   horario: text("horario"), // HH:mm:ss registrado no dispositivo
@@ -179,7 +179,7 @@ export const frequencia = pgTable("frequencia", {
 
 export const fotosAlunos = pgTable("fotos_alunos", {
   id: serial("id").primaryKey(),
-  alunoId: integer("aluno_id").references(() => alunos.id).notNull(),
+  alunoId: integer("aluno_id").references(() => alunos.id, { onDelete: "cascade" }).notNull(),
   objectPath: text("object_path"), // Mantido para compatibilidade
   fotoBase64: text("foto_base64"), // Nova coluna para armazenar a imagem no banco
   criadoEm: timestamp("criado_em").defaultNow(),
