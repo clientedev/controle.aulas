@@ -419,7 +419,6 @@ export class DatabaseStorage implements IStorage {
           .set({ 
             status: data.status,
             horario: data.horario || format(new Date(), "HH:mm"),
-            metodo: data.metodo || "manual"
           })
           .where(eq(frequencia.id, existe.id))
           .returning();
@@ -431,7 +430,6 @@ export class DatabaseStorage implements IStorage {
           data: today,
           status: data.status,
           horario: data.horario || format(new Date(), "HH:mm"),
-          metodo: data.metodo || "manual"
         }).returning();
         return n;
       }

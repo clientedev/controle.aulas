@@ -1178,15 +1178,14 @@ function AttendanceTab({ classId, students }: { classId: number, students: any[]
 
   const toggleAttendance = (alunoId: number, currentStatus: number) => {
     const now = new Date();
-    const deviceTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const deviceTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     
     mutation.mutate({
       turmaId: classId,
       alunoId,
       data,
       status: currentStatus === 1 ? 0 : 1,
-      horario: deviceTime,
-      metodo: "manual"
+      horario: deviceTime
     });
   };
 
@@ -1219,7 +1218,6 @@ function AttendanceTab({ classId, students }: { classId: number, students: any[]
             <TableRow>
               <TableHead>Aluno</TableHead>
               <TableHead className="text-center">Horário</TableHead>
-              <TableHead className="text-center">Método</TableHead>
               <TableHead className="text-center">Status</TableHead>
               <TableHead className="text-right">Ação</TableHead>
             </TableRow>
@@ -1234,13 +1232,6 @@ function AttendanceTab({ classId, students }: { classId: number, students: any[]
                   <TableCell className="font-medium">{student.nome}</TableCell>
                   <TableCell className="text-center text-muted-foreground text-sm">
                     {record?.horario || "-"}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {record?.metodo === "facial" ? (
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Facial</Badge>
-                    ) : record?.metodo === "manual" ? (
-                      <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200">Manual</Badge>
-                    ) : "-"}
                   </TableCell>
                   <TableCell className="text-center">
                     <Badge variant={isPresent ? "default" : "destructive"}>
