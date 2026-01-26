@@ -117,33 +117,38 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTurma(id: number): Promise<any | undefined> {
-    const [t] = await db.select().from(turmas).where(eq(turmas.id, id));
-    if (!t) return undefined;
+    try {
+      const [t] = await db.select().from(turmas).where(eq(turmas.id, id));
+      if (!t) return undefined;
 
-    const [professor] = await db.select().from(usuarios).where(eq(usuarios.id, t.professorId));
-    const alunosTurma = await this.getAlunosDaTurma(id);
-    const ucs = await this.getUnidadesCurricularesDaTurma(id);
-    
-    // Buscar avaliações de todas as UCs da turma
-    const avs: Avaliacao[] = [];
-    for (const uc of ucs) {
-      const ucas = await db.select().from(avaliacoes).where(eq(avaliacoes.unidadeCurricularId, uc.id));
-      avs.push(...ucas);
+      const [professor] = await db.select().from(usuarios).where(eq(usuarios.id, t.professorId));
+      const alunosTurma = await this.getAlunosDaTurma(id);
+      const ucs = await this.getUnidadesCurricularesDaTurma(id);
+      
+      // Buscar avaliações de todas as UCs da turma
+      const avs: Avaliacao[] = [];
+      for (const uc of ucs) {
+        const ucas = await db.select().from(avaliacoes).where(eq(avaliacoes.unidadeCurricularId, uc.id));
+        avs.push(...ucas);
+      }
+
+      const contagem = await db
+        .select({ count: matriculas.id })
+        .from(matriculas)
+        .where(eq(matriculas.turmaId, id));
+
+      return { 
+        ...t, 
+        professor,
+        alunos: alunosTurma,
+        unidadesCurriculares: ucs,
+        avaliacoes: avs,
+        contagemAlunos: contagem.length 
+      };
+    } catch (error) {
+      console.error(`Erro ao buscar turma ${id}:`, error);
+      throw error;
     }
-
-    const contagem = await db
-      .select({ count: matriculas.id })
-      .from(matriculas)
-      .where(eq(matriculas.turmaId, id));
-
-    return { 
-      ...t, 
-      professor,
-      alunos: alunosTurma,
-      unidadesCurriculares: ucs,
-      avaliacoes: avs,
-      contagemAlunos: contagem.length 
-    };
   }
 
   async criarTurma(data: InsertTurma): Promise<Turma> {

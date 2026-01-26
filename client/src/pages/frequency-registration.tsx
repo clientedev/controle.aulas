@@ -246,7 +246,10 @@ export default function FrequencyRegistration() {
     mutationFn: async (data: { alunoId: number; status: number; horario?: string; data?: string; metodo?: string; turmaId?: number }) => {
       // Find a class for this student to register presence
       const res = await fetch(`/api/alunos/${data.alunoId}`);
-      if (!res.ok) throw new Error("Erro ao buscar dados do aluno");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.mensagem || "Erro ao buscar dados do aluno");
+      }
       const studentData = await res.json();
       
       if (studentData.turmas && studentData.turmas.length > 0) {

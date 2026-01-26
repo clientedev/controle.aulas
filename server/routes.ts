@@ -159,20 +159,29 @@ export async function registerRoutes(
   });
 
   app.get("/api/alunos/:id", autenticar, async (req, res) => {
-    const id = Number(req.params.id);
-    const aluno = await storage.getAluno(id);
-    if (!aluno) return res.status(404).json({ mensagem: "Aluno não encontrado" });
+    try {
+      const id = Number(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ mensagem: "ID de aluno inválido" });
+      }
+      
+      const aluno = await storage.getAluno(id);
+      if (!aluno) return res.status(404).json({ mensagem: "Aluno não encontrado" });
 
-    const turmasMatriculadas = await storage.getTurmasDoAluno(id);
-    const notasAluno = await storage.getNotasDoAluno(id);
-    const frequenciaAluno = await storage.getFrequenciaDoAluno(id);
+      const turmasMatriculadas = await storage.getTurmasDoAluno(id);
+      const notasAluno = await storage.getNotasDoAluno(id);
+      const frequenciaAluno = await storage.getFrequenciaDoAluno(id);
 
-    res.json({
-      ...aluno,
-      turmas: turmasMatriculadas,
-      notas: notasAluno,
-      frequencia: frequenciaAluno
-    });
+      res.json({
+        ...aluno,
+        turmas: turmasMatriculadas,
+        notas: notasAluno,
+        frequencia: frequenciaAluno
+      });
+    } catch (error) {
+      console.error(`Erro no endpoint /api/alunos/${req.params.id}:`, error);
+      res.status(500).json({ mensagem: "Erro interno ao buscar dados do aluno" });
+    }
   });
 
   app.post(api.alunos.criar.path, autenticar, async (req: any, res) => {
