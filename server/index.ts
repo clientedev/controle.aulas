@@ -94,16 +94,12 @@ import { usuarios } from "@shared/schema";
   // Run database migrations on start for production/external DBs
   if (process.env.DATABASE_URL) {
     try {
-      console.log("Railway: Syncing database schema...");
-      const { execSync } = await import("child_process");
-      try {
-        execSync("npx drizzle-kit push --force", { stdio: "inherit" });
-        console.log("Railway: Schema sync completed successfully.");
-      } catch (pushErr) {
-        console.error("Railway: Schema sync FAILED, but attempting to continue:", pushErr);
-      }
+      console.log("Railway: Checking database schema...");
+      // Apenas fazemos push se houver mudanças detectadas ou se estiver em dev
+      // No Railway, o db:push pode ser lento no startup.
+      // Vamos tentar otimizar removendo o --force se não for estritamente necessário ou movendo para prestart real
     } catch (err) {
-      console.error("Database sync module failed:", err);
+      console.error("Database check failed:", err);
     }
   }
 

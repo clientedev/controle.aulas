@@ -99,7 +99,8 @@ export default function FrequencyRegistration() {
               continue;
             }
 
-            const detection = await faceapi.detectSingleFace(studentImg, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+            // Usar TinyFaceDetector com configurações ultra rápidas
+            const detection = await faceapi.detectSingleFace(studentImg, new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.5 })).withFaceLandmarks().withFaceDescriptor();
             if (detection) {
               const descriptorArray = Array.from(detection.descriptor);
               if (cacheKey) cacheData[cacheKey] = descriptorArray;
@@ -168,8 +169,10 @@ export default function FrequencyRegistration() {
 
     try {
       const input = await faceapi.fetchImage(base64Image);
-      // Usar TinyFaceDetector para detecção em tempo real (muito mais rápido que SsdMobilenetv1)
-      const detection = await faceapi.detectSingleFace(input, new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 })).withFaceLandmarks().withFaceDescriptor();
+      // Configurações agressivas de velocidade: inputSize menor (128) e apenas os modelos necessários
+      const detection = await faceapi.detectSingleFace(input, new faceapi.TinyFaceDetectorOptions({ inputSize: 128, scoreThreshold: 0.5 }))
+        .withFaceLandmarks()
+        .withFaceDescriptor();
 
       if (!detection) {
         if (!auto) {
