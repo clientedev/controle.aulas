@@ -115,10 +115,20 @@ import { usuarios } from "@shared/schema";
     return res.status(status).json({ message });
   });
 
-  // importantly only setup vite in development and after
+  // Importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   if (process.env.NODE_ENV === "production") {
+    // Sincronização forçada no Railway antes de servir estáticos
+    if (process.env.DATABASE_URL) {
+      const { execSync } = await import("child_process");
+      try {
+        console.log("Railway: Executando script de sincronização...");
+        execSync("bash scripts/railway-db-sync.sh", { stdio: "inherit" });
+      } catch (e) {
+        console.error("Railway: Falha na sincronização inicial, mas continuando...", e);
+      }
+    }
     serveStatic(app);
   } else {
     const { setupVite } = await import("./vite");

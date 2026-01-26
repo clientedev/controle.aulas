@@ -1,0 +1,169 @@
+api/me:1  Failed to load resource: the server responded with a status of 401 ()
+index-zoI8i1uX.js:3963 Loading face-api models from: /models/
+index-zoI8i1uX.js:3963 Models loaded successfully
+index-zoI8i1uX.js:3963 Totem: Processamento concluído. 5 faces carregadas.
+index-zoI8i1uX.js:3963 Error: fetchImage - expected blob type to be of type image/*, instead have: text/plain, for url: data:,
+    at index-zoI8i1uX.js:3963:59007
+    at u (index-zoI8i1uX.js:3963:32496)
+    at Object.next (index-zoI8i1uX.js:3963:31800)
+    at o (index-zoI8i1uX.js:3963:31382)
+z @ index-zoI8i1uX.js:3963
+index-zoI8i1uX.js:3963 Error: fetchImage - expected blob type to be of type image/*, instead have: text/plain, for url: data:,
+    at index-zoI8i1uX.js:3963:59007
+    at u (index-zoI8i1uX.js:3963:32496)
+    at Object.next (index-zoI8i1uX.js:3963:31800)
+    at o (index-zoI8i1uX.js:3963:31382)
+z @ index-zoI8i1uX.js:3963
+index-zoI8i1uX.js:3963 Totem: Aluno identificado! Carlos Roberto Lima
+index-zoI8i1uX.js:3963 Totem: Parando track video
+index-zoI8i1uX.js:3963 Totem: Enviando POST para turma 1 - Aluno 3
+frequencia:1  Failed to load resource: the server responded with a status of 500 ()
+index-zoI8i1uX.js:3963 Totem: Erro ao registrar: Error: 500: {"message":"column \"metodo\" does not exist"}
+    at zA (index-zoI8i1uX.js:8:96893)
+    at async Xm (index-zoI8i1uX.js:8:97094)
+    at async Object.mutationFn (index-zoI8i1uX.js:3963:143650)
+onError @ index-zoI8i1uX.js:3963
+api/turmas/4/frequencia?data=2026-01-26:1  Failed to load resource: the server responded with a status of 500 ()
+index-zoI8i1uX.js:3963 Loading face-api models from: /models/
+index-zoI8i1uX.js:3963 Models loaded successfully
+index-zoI8i1uX.js:3963 Totem: Processamento concluído. 5 faces carregadas.
+index-zoI8i1uX.js:3963 Totem: Aluno identificado! Carlos Roberto Lima
+index-zoI8i1uX.js:3963 Totem: Parando track video
+index-zoI8i1uX.js:3963 Totem: Enviando POST para turma 1 - Aluno 3
+frequencia:1  Failed to load resource: the server responded with a status of 500 ()
+index-zoI8i1uX.js:3963 Totem: Erro ao registrar: Error: 500: {"message":"column \"metodo\" does not exist"}
+    at zA (index-zoI8i1uX.js:8:96893)
+    at async Xm (index-zoI8i1uX.js:8:97094)
+    at async Object.mutationFn (index-zoI8i1uX.js:3963:143650)
+onError @ index-zoI8i1uX.js:3963
+index-zoI8i1uX.js:3963 Totem: Aluno identificado! Carlos Roberto Lima
+index-zoI8i1uX.js:3963 Totem: Parando track video
+index-zoI8i1uX.js:3963 Totem: Enviando POST para turma 1 - Aluno 3
+index-zoI8i1uX.js:8  POST https://controleaulas-production.up.railway.app/api/turmas/1/frequencia 500 (Internal Server Error)
+Xm @ index-zoI8i1uX.js:8
+mutationFn @ index-zoI8i1uX.js:3963
+await in mutationFn
+fn @ index-zoI8i1uX.js:8
+x @ index-zoI8i1uX.js:8
+start @ index-zoI8i1uX.js:8
+execute @ index-zoI8i1uX.js:8
+await in execute
+mutate @ index-zoI8i1uX.js:8
+(anonymous) @ index-zoI8i1uX.js:8
+z @ index-zoI8i1uX.js:3963
+await in z
+(anonymous) @ index-zoI8i1uX.js:3963
+index-zoI8i1uX.js:3963 Totem: Erro ao registrar: Error: 500: {"message":"column \"metodo\" does not exist"}
+    at zA (index-zoI8i1uX.js:8:96893)
+    at async Xm (index-zoI8i1uX.js:8:97094)
+    at async Object.mutationFn (index-zoI8i1uX.js:3963:143650)
+onError @ index-zoI8i1uX.js:3963
+execute @ index-zoI8i1uX.js:8
+await in execute
+mutate @ index-zoI8i1uX.js:8
+(anonymous) @ index-zoI8i1uX.js:8
+z @ index-zoI8i1uX.js:3963
+await in z
+(anonymous) @ index-zoI8i1uX.js:3963
+index-zoI8i1uX.js:3963 Totem: Aluno identificado! Carlos Roberto Lima
+index-zoI8i1uX.js:3963 Totem: Parando track video
+index-zoI8i1uX.js:3963 Totem: Enviando POST para turma 1 - Aluno 3
+index-zoI8i1uX.js:8  POST https://controleaulas-production.up.railway.app/api/turmas/1/frequencia 500 (Internal Server Error)
+Xm @ index-zoI8i1uX.js:8
+mutationFn @ index-zoI8i1uX.js:3963
+await in mutationFn
+fn @ index-zoI8i1uX.js:8
+x @ index-zoI8i1uX.js:8
+start @ index-zoI8i1uX.js:8
+execute @ index-zoI8i1uX.js:8
+await in execute
+mutate @ index-zoI8i1uX.js:8
+(anonymous) @ index-zoI8i1uX.js:8
+z @ index-zoI8i1uX.js:3963
+await in z
+(anonymous) @ index-zoI8i1uX.js:3963
+setInterval
+(anonymous) @ index-zoI8i1uX.js:3963
+V0 @ index-zoI8i1uX.js:8
+Yl @ index-zoI8i1uX.js:8
+pk @ index-zoI8i1uX.js:8
+mu @ index-zoI8i1uX.js:6
+T6 @ index-zoI8i1uX.js:8
+Ac @ index-zoI8i1uX.js:8
+hk @ index-zoI8i1uX.js:8
+T @ index-zoI8i1uX.js:1
+O @ index-zoI8i1uX.js:1
+index-zoI8i1uX.js:3963 Totem: Erro ao registrar: Error: 500: {"message":"column \"metodo\" does not exist"}
+    at zA (index-zoI8i1uX.js:8:96893)
+    at async Xm (index-zoI8i1uX.js:8:97094)
+    at async Object.mutationFn (index-zoI8i1uX.js:3963:143650)
+onError @ index-zoI8i1uX.js:3963
+execute @ index-zoI8i1uX.js:8
+await in execute
+mutate @ index-zoI8i1uX.js:8
+(anonymous) @ index-zoI8i1uX.js:8
+z @ index-zoI8i1uX.js:3963
+await in z
+(anonymous) @ index-zoI8i1uX.js:3963
+setInterval
+(anonymous) @ index-zoI8i1uX.js:3963
+V0 @ index-zoI8i1uX.js:8
+Yl @ index-zoI8i1uX.js:8
+pk @ index-zoI8i1uX.js:8
+mu @ index-zoI8i1uX.js:6
+T6 @ index-zoI8i1uX.js:8
+Ac @ index-zoI8i1uX.js:8
+hk @ index-zoI8i1uX.js:8
+T @ index-zoI8i1uX.js:1
+O @ index-zoI8i1uX.js:1
+index-zoI8i1uX.js:3963 Totem: Aluno identificado! Carlos Roberto Lima
+index-zoI8i1uX.js:3963 Totem: Parando track video
+index-zoI8i1uX.js:3963 Totem: Enviando POST para turma 1 - Aluno 3
+index-zoI8i1uX.js:8  POST https://controleaulas-production.up.railway.app/api/turmas/1/frequencia 500 (Internal Server Error)
+Xm @ index-zoI8i1uX.js:8
+mutationFn @ index-zoI8i1uX.js:3963
+await in mutationFn
+fn @ index-zoI8i1uX.js:8
+x @ index-zoI8i1uX.js:8
+start @ index-zoI8i1uX.js:8
+execute @ index-zoI8i1uX.js:8
+await in execute
+mutate @ index-zoI8i1uX.js:8
+(anonymous) @ index-zoI8i1uX.js:8
+z @ index-zoI8i1uX.js:3963
+await in z
+(anonymous) @ index-zoI8i1uX.js:3963
+setInterval
+(anonymous) @ index-zoI8i1uX.js:3963
+V0 @ index-zoI8i1uX.js:8
+Yl @ index-zoI8i1uX.js:8
+pk @ index-zoI8i1uX.js:8
+mu @ index-zoI8i1uX.js:6
+T6 @ index-zoI8i1uX.js:8
+Ac @ index-zoI8i1uX.js:8
+hk @ index-zoI8i1uX.js:8
+T @ index-zoI8i1uX.js:1
+O @ index-zoI8i1uX.js:1
+index-zoI8i1uX.js:3963 Totem: Erro ao registrar: Error: 500: {"message":"column \"metodo\" does not exist"}
+    at zA (index-zoI8i1uX.js:8:96893)
+    at async Xm (index-zoI8i1uX.js:8:97094)
+    at async Object.mutationFn (index-zoI8i1uX.js:3963:143650)
+onError @ index-zoI8i1uX.js:3963
+execute @ index-zoI8i1uX.js:8
+await in execute
+mutate @ index-zoI8i1uX.js:8
+(anonymous) @ index-zoI8i1uX.js:8
+z @ index-zoI8i1uX.js:3963
+await in z
+(anonymous) @ index-zoI8i1uX.js:3963
+setInterval
+(anonymous) @ index-zoI8i1uX.js:3963
+V0 @ index-zoI8i1uX.js:8
+Yl @ index-zoI8i1uX.js:8
+pk @ index-zoI8i1uX.js:8
+mu @ index-zoI8i1uX.js:6
+T6 @ index-zoI8i1uX.js:8
+Ac @ index-zoI8i1uX.js:8
+hk @ index-zoI8i1uX.js:8
+T @ index-zoI8i1uX.js:1
+O @ index-zoI8i1uX.js:1

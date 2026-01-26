@@ -379,13 +379,6 @@ export class DatabaseStorage implements IStorage {
     try {
       const today = data.data;
       
-      // Log para depuração de colunas no Railway
-      console.log("Storage: Tentando registrar frequência:", {
-        alunoId: data.alunoId,
-        turmaId: data.turmaId,
-        data: today
-      });
-
       const [existe] = await db.select().from(frequencia)
         .where(and(
           eq(frequencia.turmaId, data.turmaId),
@@ -394,57 +387,31 @@ export class DatabaseStorage implements IStorage {
         ));
 
       if (existe) {
-        // Fallback manual caso as colunas novas ainda deem erro no Postgres
-        const updateData: any = { 
-          status: data.status
-        };
-        
-        // Só tenta atualizar colunas novas se o valor for fornecido
-        if (data.horario) updateData.horario = data.horario;
-        if (data.metodo) updateData.metodo = data.metodo;
-
-        const [u] = await db.update(frequencia)
-          .set(updateData)
-          .where(eq(frequencia.id, existe.id))
-          .returning();
-        return u;
-      } else {
-        // Fallback para inserção
-        const insertData: any = {
-          alunoId: data.alunoId,
-          turmaId: data.turmaId,
-          data: today,
-          status: data.status
-        };
-        
-        if (data.horario) insertData.horario = data.horario;
-        if (data.metodo) insertData.metodo = data.metodo;
-
-        const [n] = await db.insert(frequencia).values(insertData).returning();
-        return n;
-      }
-    } catch (error: any) {
-      console.error("Erro em registrarFrequencia:", error);
-      
-      // FALLBACK SUPREMO: Se o erro for de coluna inexistente, tenta salvar SEM as colunas novas
-      if (error.message && (error.message.includes("metodo") || error.message.includes("horario"))) {
-        console.warn("Storage: Falha detectada em colunas novas. Tentando fallback para esquema básico.");
-        const today = data.data;
-        
-        const [existe] = await db.select().from(frequencia)
-          .where(and(
-            eq(frequencia.turmaId, data.turmaId),
-            eq(frequencia.alunoId, data.alunoId),
-            eq(frequencia.data, today)
-          ));
-
-        if (existe) {
+        // Tenta atualizar. Se as colunas não existirem, o catch lidará com isso.
+        try {
+          const [u] = await db.update(frequencia)
+            .set({ 
+              status: data.status,
+              horario: data.horario,
+              metodo: data.metodo
+            })
+            .where(eq(frequencia.id, existe.id))
+            .returning();
+          return u;
+        } catch (innerErr: any) {
+          // Fallback para esquema básico se colunas novas falharem
           const [u] = await db.update(frequencia)
             .set({ status: data.status })
             .where(eq(frequencia.id, existe.id))
             .returning();
           return u;
-        } else {
+        }
+      } else {
+        try {
+          const [n] = await db.insert(frequencia).values(data).returning();
+          return n;
+        } catch (innerErr: any) {
+          // Fallback para inserção básica
           const [n] = await db.insert(frequencia).values({
             alunoId: data.alunoId,
             turmaId: data.turmaId,
@@ -454,6 +421,8 @@ export class DatabaseStorage implements IStorage {
           return n;
         }
       }
+    } catch (error: any) {
+      console.error("Erro crítico em registrarFrequencia:", error);
       throw error;
     }
   }

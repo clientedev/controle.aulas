@@ -93,14 +93,16 @@ export default function FrequencyRegistration() {
             let studentImg: HTMLImageElement;
             if (photo.fotoBase64 && photo.fotoBase64.trim().length > 50) {
               try {
-                // Limpeza agressiva da string base64 para evitar erro de blob type
                 let cleanBase64 = photo.fotoBase64.trim();
-                if (!cleanBase64.startsWith('data:')) {
+                
+                // Validação rigorosa: se não tiver o header ou for apenas o header, abortar
+                if (!cleanBase64.includes(',') && !cleanBase64.startsWith('data:')) {
                   cleanBase64 = `data:image/jpeg;base64,${cleanBase64}`;
                 }
                 
-                // Garantir que não estamos tentando carregar um data:, vazio
-                if (cleanBase64 === 'data:image/jpeg;base64,' || cleanBase64 === 'data:,') {
+                // Se a string for apenas o prefixo "data:image/jpeg;base64," ou similar
+                if (cleanBase64.endsWith(',') || cleanBase64.length < 100) {
+                  console.warn("Totem: Foto base64 inválida ou muito curta detectada, pulando.");
                   continue;
                 }
 
