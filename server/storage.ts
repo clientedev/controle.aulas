@@ -175,9 +175,9 @@ export class DatabaseStorage implements IStorage {
       await db.execute(sql`DELETE FROM notas WHERE avaliacao_id IN (SELECT id FROM avaliacoes WHERE unidade_curricular_id IN (SELECT id FROM unidades_curriculares WHERE turma_id = ${id}))`);
       await db.execute(sql`DELETE FROM avaliacoes WHERE unidade_curricular_id IN (SELECT id FROM unidades_curriculares WHERE turma_id = ${id})`);
       await db.execute(sql`DELETE FROM unidades_curriculares WHERE turma_id = ${id}`);
+      await db.execute(sql`DELETE FROM frequencia WHERE turma_id = ${id}`);
       await db.execute(sql`DELETE FROM matriculas WHERE turma_id = ${id}`);
       await db.execute(sql`DELETE FROM horarios WHERE turma_id = ${id}`);
-      await db.execute(sql`DELETE FROM frequencia WHERE turma_id = ${id}`);
       await db.execute(sql`DELETE FROM turmas WHERE id = ${id}`);
       
       console.log(`Turma ${id} excluída com sucesso.`);
