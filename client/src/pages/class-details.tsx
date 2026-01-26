@@ -137,7 +137,13 @@ export default function ClassDetails() {
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancelar</AlertDialogCancel>
                   <AlertDialogAction 
-                    onClick={() => deleteClassMutation.mutate(classId)}
+                    onClick={() => {
+                      deleteClassMutation.mutate(classId, {
+                        onSuccess: () => {
+                          window.location.href = "/";
+                        }
+                      });
+                    }}
                     className="bg-destructive hover:bg-destructive/90"
                   >
                     Excluir

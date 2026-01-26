@@ -329,12 +329,12 @@ export async function registerRoutes(
 
   app.delete("/api/turmas/:id", autenticar, async (req: any, res) => {
     try {
-      const id = Number(req.params.id);
-      console.log(`Tentando excluir turma ID: ${id}`);
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ mensagem: "ID de turma inválido" });
+      }
       
-      // O banco está configurado com ON DELETE CASCADE, mas o Drizzle/Postgres 
-      // às vezes precisa de uma ajudinha se houver restrições circulares ou 
-      // complexas. Vamos tentar a exclusão direta.
+      console.log(`Tentando excluir turma ID: ${id}`);
       await storage.excluirTurma(id);
       
       res.status(204).end();
