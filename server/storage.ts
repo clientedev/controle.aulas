@@ -378,6 +378,15 @@ export class DatabaseStorage implements IStorage {
   async registrarFrequencia(data: InsertFrequencia): Promise<Frequencia> {
     try {
       const today = data.data;
+      
+      // Log para depuração de colunas no Railway
+      console.log("Storage: Tentando registrar frequência:", {
+        alunoId: data.alunoId,
+        turmaId: data.turmaId,
+        data: today,
+        metodo: data.metodo
+      });
+
       const [existe] = await db.select().from(frequencia)
         .where(and(
           eq(frequencia.turmaId, data.turmaId),
@@ -399,8 +408,9 @@ export class DatabaseStorage implements IStorage {
         const [n] = await db.insert(frequencia).values(data).returning();
         return n;
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro em registrarFrequencia:", error);
+      // Se o erro for de coluna inexistente, tentamos um fallback ou logamos o erro específico
       throw error;
     }
   }
