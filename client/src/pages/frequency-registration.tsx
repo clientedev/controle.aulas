@@ -216,12 +216,13 @@ export default function FrequencyRegistration() {
       }
 
       let bestMatch: { student: Aluno; distance: number } | null = null;
-      let minDistance = 0.6; // Limiar padrão para face-api.js
+      let minDistance = 0.45; // Limiar mais rigoroso para evitar falsos positivos
 
       for (const item of descriptors) {
         const distance = faceapi.euclideanDistance(detection.descriptor, item.descriptor);
-        // Log para debug opcional se necessário
-        // console.log(`Distance to ${item.alunoId}: ${distance}`);
+        // Log para debug opcional
+        console.log(`Distance to student ${item.alunoId}: ${distance.toFixed(4)}`);
+        
         if (distance < minDistance) {
           minDistance = distance;
           const student = students.find(s => s.id === item.alunoId);
@@ -231,12 +232,7 @@ export default function FrequencyRegistration() {
         }
       }
 
-      // Cálculo de confiança baseado no limiar de 0.6
-      // Se minDistance for 0.6, confiança é 0% (no limite)
-      // Se minDistance for 0, confiança é 100%
-      const confidence = Math.max(0, (0.6 - minDistance) / 0.6) * 100;
-
-      if (bestMatch && minDistance < 0.6) { // Limiar padrão recomendado para face-api.js
+      if (bestMatch && minDistance < 0.45) { // Limiar ajustado para melhor precisão
         console.log("Totem: Aluno identificado!", bestMatch.student.nome);
         
         // Registrar presença PRIMEIRO
@@ -449,7 +445,7 @@ export default function FrequencyRegistration() {
                 </div>
                 <h3 className="text-3xl font-bold text-primary mb-2 uppercase">{recognitionResult.aluno.nome}</h3>
                 <p className="text-xl text-muted-foreground mb-2">RA: {recognitionResult.aluno.matricula}</p>
-                <p className="text-xs text-muted-foreground mb-6">Confiança: {Math.round((0.6 - recognitionResult.distance) / 0.6 * 100)}%</p>
+                <p className="text-xs text-muted-foreground mb-6">Distância: {recognitionResult.distance.toFixed(4)} (Confiança: {Math.round((0.45 - recognitionResult.distance) / 0.45 * 100)}%)</p>
                 
                 <div className="inline-block px-6 py-3 bg-primary text-white rounded-2xl text-lg font-bold shadow-md">
                   PRESENÇA CONFIRMADA
