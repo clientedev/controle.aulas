@@ -76,6 +76,23 @@ export default function FrequencyRegistration() {
         const cacheData = cached ? JSON.parse(cached) : {};
         const loadedDescriptors: { alunoId: number; descriptor: Float32Array }[] = [];
         
+        // Limpeza de cache para fotos que não existem mais ou estão corrompidas
+        const currentPhotoPaths = new Set(studentPhotos.map(p => p.objectPath).filter(Boolean));
+        let cacheUpdated = false;
+        
+        for (const key in cacheData) {
+          // Se for uma entrada de objectPath que não está mais na lista de fotos atuais
+          if (key.length > 50 && key.includes('/') && !currentPhotoPaths.has(key)) {
+            console.log(`Totem: Removendo cache órfão: ${key}`);
+            delete cacheData[key];
+            cacheUpdated = true;
+          }
+        }
+        
+        if (cacheUpdated) {
+          localStorage.setItem("face_descriptors_cache", JSON.stringify(cacheData));
+        }
+        
         let processed = 0;
         for (const photo of studentPhotos) {
           try {
