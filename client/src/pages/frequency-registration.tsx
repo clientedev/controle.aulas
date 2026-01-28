@@ -28,16 +28,22 @@ export default function FrequencyRegistration() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
 
-  const [descriptors, setDescriptors] = useState<{ alunoId: number; descriptor: Float32Array }[]>([]);
+  const [descriptors, setDescriptors] = useState<{ alunoId: number; descriptor: Float32Array; descriptorCount: number }[]>([]);
   const [isProcessingModels, setIsProcessingModels] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [totemActive, setTotemActive] = useState(false);
   const [lastAutoCapture, setLastAutoCapture] = useState<number>(0);
+  const [lastRecognizedId, setLastRecognizedId] = useState<number | null>(null);
   const recognitionCooldown = 5000; // 5 segundos entre registros do mesmo rosto
   
-  // Limiar de reconhecimento - 0.20 garante 80%+ de similaridade real no modelo SSD
-  // No face-api.js com SSD, 0.45 é permissivo, 0.20 é rigoroso (80%+ real)
-  const RECOGNITION_THRESHOLD = 0.20;
+  // Limiar de reconhecimento otimizado - 0.45 permite mais flexibilidade com múltiplas fotos
+  // Quanto menor o valor, mais estrito o reconhecimento
+  // Com múltiplos descritores por aluno, podemos ser um pouco mais tolerantes
+  const RECOGNITION_THRESHOLD = 0.45;
+  
+  // Número mínimo de confirmações consecutivas para validar reconhecimento
+  const MIN_CONFIRMATIONS = 2;
+  const [confirmationCount, setConfirmationCount] = useState<{ alunoId: number; count: number } | null>(null);
 
   const { data: students } = useQuery<Aluno[]>({
     queryKey: turmaId ? [`/api/turmas/${turmaId}/alunos`] : ["/api/alunos"],
@@ -76,15 +82,18 @@ export default function FrequencyRegistration() {
   }, []);
 
   // Pre-process student descriptors once photos are loaded
+  // Agrupa múltiplos descritores por aluno e calcula a média para maior precisão
   useEffect(() => {
     if (modelsLoaded && studentPhotos && studentPhotos.length > 0 && descriptors.length === 0) {
       const processDescriptors = async () => {
         setIsProcessingModels(true);
-        const cached = localStorage.getItem("face_descriptors_cache");
+        const cached = localStorage.getItem("face_descriptors_cache_v2");
         const cacheData = cached ? JSON.parse(cached) : {};
-        const loadedDescriptors: { alunoId: number; descriptor: Float32Array }[] = [];
         
-        // Limpeza de cache para fotos que não existem mais ou estão corrompidas
+        // Map temporário para agrupar descritores por aluno
+        const descriptorsByStudent = new Map<number, Float32Array[]>();
+        
+        // Limpeza de cache para fotos que não existem mais
         const currentPhotoPaths = new Set(studentPhotos.map(p => p.objectPath).filter(Boolean));
         let cacheUpdated = false;
         
@@ -96,7 +105,7 @@ export default function FrequencyRegistration() {
         }
         
         if (cacheUpdated) {
-          localStorage.setItem("face_descriptors_cache", JSON.stringify(cacheData));
+          localStorage.setItem("face_descriptors_cache_v2", JSON.stringify(cacheData));
         }
 
         // Processamento em PARALELO para maior velocidade
@@ -105,12 +114,14 @@ export default function FrequencyRegistration() {
           const batch = studentPhotos.slice(i, i + batchSize);
           await Promise.all(batch.map(async (photo) => {
             try {
-              const cacheKey = photo.objectPath || photo.fotoBase64?.substring(0, 100);
+              const cacheKey = photo.objectPath || `photo_${photo.alunoId}_${photo.id}`;
+              
+              // Verificar cache primeiro
               if (cacheKey && cacheData[cacheKey]) {
-                loadedDescriptors.push({
-                  alunoId: photo.alunoId,
-                  descriptor: new Float32Array(Object.values(cacheData[cacheKey]))
-                });
+                const cachedDescriptor = new Float32Array(Object.values(cacheData[cacheKey]));
+                const existing = descriptorsByStudent.get(photo.alunoId) || [];
+                existing.push(cachedDescriptor);
+                descriptorsByStudent.set(photo.alunoId, existing);
                 return;
               }
 
@@ -118,7 +129,8 @@ export default function FrequencyRegistration() {
               try {
                 if (photo.fotoBase64 && photo.fotoBase64.trim().length > 100) {
                   let cleanBase64 = photo.fotoBase64.trim();
-                  if (cleanBase64 === "data:," || cleanBase64.startsWith("data:,") && cleanBase64.length < 50) {
+                  if (cleanBase64 === "data:," || (cleanBase64.startsWith("data:,") && cleanBase64.length < 50)) {
+                    console.warn(`Foto inválida ignorada para aluno ${photo.alunoId}`);
                     return;
                   }
                   if (!cleanBase64.includes(',') && !cleanBase64.startsWith('data:')) {
@@ -136,14 +148,31 @@ export default function FrequencyRegistration() {
                 return;
               }
 
-              const detection = await faceapi.detectSingleFace(studentImg, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })).withFaceLandmarks().withFaceDescriptor();
+              // Detecção com maior confiança para garantir qualidade
+              const detection = await faceapi.detectSingleFace(
+                studentImg, 
+                new faceapi.SsdMobilenetv1Options({ minConfidence: 0.6 })
+              ).withFaceLandmarks().withFaceDescriptor();
+              
               if (detection) {
+                // Validar qualidade da detecção pelo tamanho da face
+                const faceBox = detection.detection.box;
+                const faceArea = faceBox.width * faceBox.height;
+                const imageArea = studentImg.width * studentImg.height;
+                const faceRatio = faceArea / imageArea;
+                
+                // Face deve ocupar pelo menos 5% da imagem para boa qualidade
+                if (faceRatio < 0.05) {
+                  console.warn(`Face muito pequena ignorada para aluno ${photo.alunoId}`);
+                  return;
+                }
+                
                 const descriptorArray = Array.from(detection.descriptor);
                 if (cacheKey) cacheData[cacheKey] = descriptorArray;
-                loadedDescriptors.push({
-                  alunoId: photo.alunoId,
-                  descriptor: detection.descriptor
-                });
+                
+                const existing = descriptorsByStudent.get(photo.alunoId) || [];
+                existing.push(detection.descriptor);
+                descriptorsByStudent.set(photo.alunoId, existing);
               }
             } catch (e) {
               console.error("Error processing photo", e);
@@ -152,8 +181,28 @@ export default function FrequencyRegistration() {
           setProcessingProgress(Math.round(((i + batch.length) / studentPhotos.length) * 100));
         }
         
-        localStorage.setItem("face_descriptors_cache", JSON.stringify(cacheData));
-        setDescriptors(loadedDescriptors);
+        localStorage.setItem("face_descriptors_cache_v2", JSON.stringify(cacheData));
+        
+        // Agregar descritores por aluno - mantemos todos os descritores individuais
+        // para melhor matching (FaceMatcher usa o mais próximo de múltiplos descritores)
+        const aggregatedDescriptors: { alunoId: number; descriptor: Float32Array; descriptorCount: number }[] = [];
+        
+        descriptorsByStudent.forEach((studentDescriptors, alunoId) => {
+          if (studentDescriptors.length > 0) {
+            // Adicionar cada descritor individualmente mas com contagem
+            studentDescriptors.forEach(desc => {
+              aggregatedDescriptors.push({
+                alunoId,
+                descriptor: desc,
+                descriptorCount: studentDescriptors.length
+              });
+            });
+            console.log(`Aluno ${alunoId}: ${studentDescriptors.length} descritores processados`);
+          }
+        });
+        
+        console.log(`Total: ${aggregatedDescriptors.length} descritores para ${descriptorsByStudent.size} alunos`);
+        setDescriptors(aggregatedDescriptors);
         setIsProcessingModels(false);
       };
       processDescriptors();
@@ -198,8 +247,8 @@ export default function FrequencyRegistration() {
       return;
     }
 
-    // Cooldown para evitar múltiplos registros acidentais no modo automático
-    if (auto && Date.now() - lastAutoCapture < recognitionCooldown) return;
+    // Cooldown para evitar múltiplos registros do mesmo aluno
+    if (auto && lastRecognizedId && Date.now() - lastAutoCapture < recognitionCooldown) return;
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -213,98 +262,139 @@ export default function FrequencyRegistration() {
       stopVideo();
     }
 
-      try {
-        const input = await faceapi.fetchImage(base64Image);
-        
-        // Detecção ultra-rápida inicial para verificar se há rosto
-        const detection = await faceapi.detectSingleFace(input, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
-          .withFaceLandmarks()
-          .withFaceDescriptor();
+    try {
+      const input = await faceapi.fetchImage(base64Image);
+      
+      // Detecção com confiança adequada
+      const detection = await faceapi.detectSingleFace(
+        input, 
+        new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })
+      ).withFaceLandmarks().withFaceDescriptor();
 
-        if (!detection) {
-          if (!auto) {
-            toast({
-              title: "Erro",
-              description: "Nenhuma face detectada. Tente se posicionar melhor.",
-              variant: "destructive",
-            });
-          }
-          return;
+      if (!detection) {
+        // Resetar contagem de confirmação se não detectar face
+        if (auto) setConfirmationCount(null);
+        if (!auto) {
+          toast({
+            title: "Erro",
+            description: "Nenhuma face detectada. Tente se posicionar melhor.",
+            variant: "destructive",
+          });
         }
+        return;
+      }
 
-        // Criar FaceMatcher em tempo real para busca ultra-rápida (vetorizada)
-        // Isso é muito mais rápido que loop manual de euclideanDistance
-        const labeledDescriptors = descriptors.reduce((acc, item) => {
-          const existing = acc.find(l => l.label === item.alunoId.toString());
-          if (existing) {
-            existing.descriptors.push(item.descriptor);
-          } else {
-            acc.push(new faceapi.LabeledFaceDescriptors(item.alunoId.toString(), [item.descriptor]));
-          }
-          return acc;
-        }, [] as faceapi.LabeledFaceDescriptors[]);
+      // Validar qualidade da detecção
+      const faceBox = detection.detection.box;
+      const minFaceSize = 80; // Face mínima de 80x80 pixels
+      if (faceBox.width < minFaceSize || faceBox.height < minFaceSize) {
+        if (!auto) {
+          toast({
+            title: "Aproxime-se",
+            description: "Face muito distante da câmera.",
+            variant: "destructive",
+          });
+        }
+        return;
+      }
 
-        if (labeledDescriptors.length === 0) return;
+      // Criar FaceMatcher com todos os descritores
+      const labeledDescriptors = descriptors.reduce((acc, item) => {
+        const existing = acc.find(l => l.label === item.alunoId.toString());
+        if (existing) {
+          existing.descriptors.push(item.descriptor);
+        } else {
+          acc.push(new faceapi.LabeledFaceDescriptors(item.alunoId.toString(), [item.descriptor]));
+        }
+        return acc;
+      }, [] as faceapi.LabeledFaceDescriptors[]);
 
-        const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, RECOGNITION_THRESHOLD);
-        const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
+      if (labeledDescriptors.length === 0) return;
 
-        if (bestMatch.label !== "unknown") { 
-          const matchedId = parseInt(bestMatch.label);
-          const student = students.find(s => s.id === matchedId);
-          
-          if (student) {
-            console.log("Totem: Aluno identificado!", student.nome, "Distância:", bestMatch.distance);
-            
-            // Calcular similaridade para exibição
-            const similarity = Math.round(100 - (bestMatch.distance * 50)); 
-            
-            // Registrar presença PRIMEIRO
-            const now = new Date();
-            const deviceTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            const deviceDate = now.toISOString().split('T')[0];
+      const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, RECOGNITION_THRESHOLD);
+      const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
 
-            registerPresenceMutation.mutate({
-              alunoId: student.id,
-              status: 1, 
-              horario: deviceTime,
-              data: deviceDate,
-              metodo: "facial"
-            });
-
-            // Atualizar UI e parar câmera
-            setCapturedImage(base64Image);
-            setRecognitionResult({ 
-              aluno: student, 
-              distance: bestMatch.distance,
-              similarity: similarity
-            });
-            setLastAutoCapture(Date.now());
-            setIsScanning(false);
-            setTotemActive(false);
-            
-            if (videoRef.current && videoRef.current.srcObject) {
-              const stream = videoRef.current.srcObject as MediaStream;
-              stream.getTracks().forEach(track => track.stop());
-              videoRef.current.srcObject = null;
+      if (bestMatch.label !== "unknown") { 
+        const matchedId = parseInt(bestMatch.label);
+        const student = students.find(s => s.id === matchedId);
+        
+        if (student) {
+          // Sistema de confirmação múltipla para maior precisão
+          if (auto) {
+            if (confirmationCount && confirmationCount.alunoId === matchedId) {
+              // Mesmo aluno detectado consecutivamente
+              const newCount = confirmationCount.count + 1;
+              setConfirmationCount({ alunoId: matchedId, count: newCount });
+              
+              if (newCount < MIN_CONFIRMATIONS) {
+                console.log(`Confirmação ${newCount}/${MIN_CONFIRMATIONS} para ${student.nome}`);
+                return; // Aguardar mais confirmações
+              }
+            } else {
+              // Primeiro reconhecimento ou aluno diferente
+              setConfirmationCount({ alunoId: matchedId, count: 1 });
+              console.log(`Primeira detecção de ${student.nome}, aguardando confirmação...`);
+              return;
             }
           }
+          
+          console.log("Aluno CONFIRMADO:", student.nome, "Distância:", bestMatch.distance.toFixed(3));
+          
+          // Calcular similaridade real (distância euclidiana para porcentagem)
+          // Distância 0 = 100% similar, distância 0.6 = 40% similar
+          const similarity = Math.max(0, Math.min(100, Math.round((1 - bestMatch.distance) * 100)));
+          
+          // Registrar presença
+          const now = new Date();
+          const deviceTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          const deviceDate = now.toISOString().split('T')[0];
+
+          registerPresenceMutation.mutate({
+            alunoId: student.id,
+            status: 1, 
+            horario: deviceTime,
+            data: deviceDate,
+            metodo: "facial"
+          });
+
+          // Atualizar UI e parar câmera
+          setCapturedImage(base64Image);
+          setRecognitionResult({ 
+            aluno: student, 
+            distance: bestMatch.distance,
+            similarity: similarity
+          });
+          setLastAutoCapture(Date.now());
+          setLastRecognizedId(matchedId);
+          setConfirmationCount(null);
+          setIsScanning(false);
+          setTotemActive(false);
+          
+          if (videoRef.current && videoRef.current.srcObject) {
+            const stream = videoRef.current.srcObject as MediaStream;
+            stream.getTracks().forEach(track => track.stop());
+            videoRef.current.srcObject = null;
+          }
         }
-      } catch (err) {
-        console.error(err);
+      } else {
+        // Nenhum match encontrado - resetar confirmação
+        if (auto) setConfirmationCount(null);
       }
+    } catch (err) {
+      console.error("Erro no reconhecimento:", err);
+    }
   };
 
-  // Loop de detecção automática
+  // Loop de detecção automática - mais rápido para sistema de confirmação
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isScanning && modelsLoaded && !isProcessingModels && !recognitionResult) {
       interval = setInterval(() => {
         handleCapture(true);
-      }, 1000); // Tenta detectar a cada 1 segundo
+      }, 500); // Detectar a cada 500ms para confirmação rápida
     }
     return () => clearInterval(interval);
-  }, [isScanning, modelsLoaded, isProcessingModels, descriptors, recognitionResult]);
+  }, [isScanning, modelsLoaded, isProcessingModels, descriptors, recognitionResult, confirmationCount]);
 
   const registerPresenceMutation = useMutation({
     mutationFn: async (data: { alunoId: number; status: number; horario?: string; data?: string; metodo?: string; turmaId?: number }) => {
