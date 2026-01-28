@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "NODE_ENV=development tsx server/index.ts",
     "build": "tsx script/build.ts",
-    "start": "npm run db:push --force && node --max-old-space-size=450 dist/index.cjs",
+    "start": "node --max-old-space-size=450 dist/index.cjs",
     "railway:db-sync": "npx drizzle-kit push --force",
     "railway:update-db": "tsx server/update-db-railway.ts",
     "check": "tsc",
@@ -14,7 +14,7 @@
     "db:push:force": "drizzle-kit push --force",
     "db:migrate": "drizzle-kit push --force",
     "deploy:railway": "bash script/railway-deploy.sh",
-    "prestart": "npx drizzle-kit push --force"
+    "prestart": "tsx server/update-db-railway.ts && npx drizzle-kit push --force"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.18.0",
