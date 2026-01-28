@@ -15,7 +15,7 @@ import { useUnidadesCurriculares, useCreateUnidadeCurricular } from "@/hooks/use
 import { LayoutShell } from "@/components/layout-shell";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -126,7 +126,7 @@ export default function ClassDetails() {
               value="grades" 
               className="rounded-none border-b-2 border-transparent px-4 py-3 font-medium data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary"
             >
-              Notas
+              Critérios de Avaliação
             </TabsTrigger>
             <TabsTrigger 
               value="final-grades" 
@@ -204,17 +204,43 @@ export default function ClassDetails() {
 
 function GradingView({ evaluation, students, onBack }: { evaluation: any, students: any[], onBack: () => void }) {
   const updateGradeMutation = useUpdateGrade();
+  const { toast } = useToast();
   const [grades, setGrades] = useState<Record<number, string>>({});
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleUpdate = (studentId: number, valor: string) => {
     setGrades(prev => ({ ...prev, [studentId]: valor }));
-    const numValor = parseFloat(valor);
-    if (!isNaN(numValor)) {
-      updateGradeMutation.mutate({
-        alunoId: studentId,
-        avaliacaoId: evaluation.id,
-        valor: numValor
+  };
+
+  const handleSaveAll = async () => {
+    setIsSaving(true);
+    try {
+      const promises = Object.entries(grades).map(([studentId, valor]) => {
+        const numValor = parseFloat(valor);
+        if (!isNaN(numValor)) {
+          return updateGradeMutation.mutateAsync({
+            alunoId: parseInt(studentId),
+            avaliacaoId: evaluation.id,
+            valor: numValor
+          });
+        }
+        return Promise.resolve();
       });
+
+      await Promise.all(promises);
+      toast({
+        title: "Sucesso",
+        description: "Notas salvas com sucesso!",
+      });
+      onBack();
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Falha ao salvar algumas notas.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -223,7 +249,14 @@ function GradingView({ evaluation, students, onBack }: { evaluation: any, studen
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Lançar Notas: {evaluation.nome}</CardTitle>
-          <Button variant="ghost" onClick={onBack}><ArrowLeft className="mr-2 h-4 w-4" /> Voltar</Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onBack} disabled={isSaving}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
+            </Button>
+            <Button onClick={handleSaveAll} disabled={isSaving}>
+              {isSaving ? "Salvando..." : "Salvar Notas"}
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -252,6 +285,11 @@ function GradingView({ evaluation, students, onBack }: { evaluation: any, studen
           </TableBody>
         </Table>
       </CardContent>
+      <CardFooter className="flex justify-end p-6 border-t">
+        <Button onClick={handleSaveAll} disabled={isSaving}>
+          {isSaving ? "Salvando..." : "Salvar Notas"}
+        </Button>
+      </CardFooter>
     </Card>
   );
 }
