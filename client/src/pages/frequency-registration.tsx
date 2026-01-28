@@ -374,15 +374,28 @@ export default function FrequencyRegistration() {
           <p className="text-sm md:text-lg text-muted-foreground mt-1 md:mt-2">Registro de presença automático.</p>
         </div>
         {isTotem && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => logout.mutate()}
-            className="gap-2"
-          >
-            <LogOut className="h-4 w-4" />
-            Sair do Terminal
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                localStorage.removeItem("face_descriptors_cache");
+                window.location.reload();
+              }}
+              title="Limpar cache de faces"
+            >
+              <Loader2 className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => logout.mutate()}
+              className="gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              Sair do Terminal
+            </Button>
+          </div>
         )}
       </header>
 
