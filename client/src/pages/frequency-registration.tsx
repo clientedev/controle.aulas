@@ -46,9 +46,9 @@ export default function FrequencyRegistration() {
       try {
         console.log("Loading face-api models from:", MODEL_URL);
         
-        // Carregamento otimizado: TinyFaceDetector é o principal para totem
+        // Carregamento otimizado: SSD MobileNet v1 para maior precisão
         await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
           faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
           faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
         ]);
@@ -118,8 +118,8 @@ export default function FrequencyRegistration() {
               continue;
             }
 
-            // Usar TinyFaceDetector com configurações equilibradas
-            const detection = await faceapi.detectSingleFace(studentImg, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.6 })).withFaceLandmarks().withFaceDescriptor();
+            // Usar SSD MobileNet v1 para máxima precisão
+            const detection = await faceapi.detectSingleFace(studentImg, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })).withFaceLandmarks().withFaceDescriptor();
             if (detection) {
               const descriptorArray = Array.from(detection.descriptor);
               if (cacheKey) cacheData[cacheKey] = descriptorArray;
@@ -199,8 +199,8 @@ export default function FrequencyRegistration() {
 
     try {
       const input = await faceapi.fetchImage(base64Image);
-      // Configurações equilibradas para precisão e velocidade
-      const detection = await faceapi.detectSingleFace(input, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.6 }))
+      // Usar SSD MobileNet v1 para detecção robusta
+      const detection = await faceapi.detectSingleFace(input, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
         .withFaceLandmarks()
         .withFaceDescriptor();
 
@@ -216,7 +216,7 @@ export default function FrequencyRegistration() {
       }
 
       let bestMatch: { student: Aluno; distance: number } | null = null;
-      let minDistance = 0.40; // Limiar mais rigoroso para evitar falsos positivos
+      let minDistance = 0.35; // Limiar ultra-rigoroso para máxima precisão
 
       for (const item of descriptors) {
         const distance = faceapi.euclideanDistance(detection.descriptor, item.descriptor);
@@ -232,7 +232,7 @@ export default function FrequencyRegistration() {
         }
       }
 
-      if (bestMatch && minDistance < 0.40) { // Limiar ajustado para melhor precisão
+      if (bestMatch && minDistance < 0.35) { // Limiar ajustado para melhor precisão
         console.log("Totem: Aluno identificado!", bestMatch.student.nome);
         
         // Registrar presença PRIMEIRO
@@ -445,7 +445,7 @@ export default function FrequencyRegistration() {
                 </div>
                 <h3 className="text-2xl md:text-3xl font-bold text-primary mb-1 md:mb-2 uppercase truncate">{recognitionResult.aluno.nome}</h3>
                 <p className="text-lg md:text-xl text-muted-foreground mb-1 md:mb-2">RA: {recognitionResult.aluno.matricula}</p>
-                <p className="text-[10px] md:text-xs text-muted-foreground mb-4 md:mb-6">Confiança: {Math.round((0.40 - recognitionResult.distance) / 0.40 * 100)}%</p>
+                <p className="text-[10px] md:text-xs text-muted-foreground mb-4 md:mb-6">Confiança: {Math.round((0.35 - recognitionResult.distance) / 0.35 * 100)}%</p>
                 
                 <div className="inline-block px-4 py-2 md:px-6 md:py-3 bg-primary text-white rounded-xl md:rounded-2xl text-base md:text-lg font-bold shadow-md">
                   PRESENÇA CONFIRMADA
