@@ -806,7 +806,7 @@ function UnidadesTab({ classId, unidades }: { classId: number, unidades: any[] }
         const res = await fetch(`/api/unidades-curriculares/${selectedUC.id}/criterios`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ criterios }),
+          body: JSON.stringify({ criterios, unidadeCurricularId: selectedUC.id }),
         });
 
         if (!res.ok) {
