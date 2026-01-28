@@ -216,12 +216,10 @@ export default function FrequencyRegistration() {
       }
 
       let bestMatch: { student: Aluno; distance: number } | null = null;
-      let minDistance = 0.45; // Limiar relaxado para diagnóstico
+      let minDistance = 0.60; // Limiar equilibrado com base nos logs reais
 
       for (const item of descriptors) {
         const distance = faceapi.euclideanDistance(detection.descriptor, item.descriptor);
-        // Log crítico para diagnóstico no console do navegador
-        console.log(`DEBUG TOTEM: Aluno ID ${item.alunoId}, Distância: ${distance.toFixed(4)}`);
         
         if (distance < minDistance) {
           minDistance = distance;
@@ -232,7 +230,7 @@ export default function FrequencyRegistration() {
         }
       }
 
-      if (bestMatch && minDistance < 0.45) { // Limiar relaxado para teste inicial
+      if (bestMatch && minDistance < 0.60) { 
         console.log("Totem: Aluno identificado!", bestMatch.student.nome, "Distância:", minDistance);
         
         // Registrar presença PRIMEIRO
@@ -356,28 +354,28 @@ export default function FrequencyRegistration() {
           <h1 className="text-2xl md:text-4xl font-bold font-display text-primary">Totem SENAI</h1>
           <p className="text-sm md:text-lg text-muted-foreground mt-1 md:mt-2">Registro de presença automático.</p>
         </div>
-        <div className="flex gap-2 relative z-50">
+        <div className="flex gap-2 items-center relative z-50">
           <Button
-            variant="outline"
-            size="icon"
+            variant="default"
+            size="sm"
             onClick={() => {
               localStorage.removeItem("face_descriptors_cache");
               window.location.reload();
             }}
-            className="h-9 w-9 border-primary/20 hover:bg-primary/10"
-            title="Limpar cache de faces"
+            className="h-9 gap-2 shadow-md"
           >
             <Loader2 className="h-4 w-4" />
+            <span>Sincronizar Faces</span>
           </Button>
           {isTotem && (
             <Button 
               variant="outline" 
               size="sm" 
               onClick={() => logout.mutate()}
-              className="gap-2 border-primary/20"
+              className="gap-2 border-primary/20 h-9"
             >
               <LogOut className="h-4 w-4" />
-              Sair do Terminal
+              Sair
             </Button>
           )}
         </div>
@@ -459,7 +457,7 @@ export default function FrequencyRegistration() {
                 </div>
                 <h3 className="text-2xl md:text-3xl font-bold text-primary mb-1 md:mb-2 uppercase truncate">{recognitionResult.aluno.nome}</h3>
                 <p className="text-lg md:text-xl text-muted-foreground mb-1 md:mb-2">RA: {recognitionResult.aluno.matricula}</p>
-                <p className="text-[10px] md:text-xs text-muted-foreground mb-4 md:mb-6">Confiança: {Math.round((0.45 - recognitionResult.distance) / 0.45 * 100)}%</p>
+                <p className="text-[10px] md:text-xs text-muted-foreground mb-4 md:mb-6">Confiança: {Math.round((0.60 - recognitionResult.distance) / 0.60 * 100)}%</p>
                 
                 <div className="inline-block px-4 py-2 md:px-6 md:py-3 bg-primary text-white rounded-xl md:rounded-2xl text-base md:text-lg font-bold shadow-md">
                   PRESENÇA CONFIRMADA
