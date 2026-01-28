@@ -248,13 +248,13 @@ function GradingView({ evaluation, students, onBack }: { evaluation: any, studen
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>Lançar Notas: {evaluation.nome}</CardTitle>
+          <CardTitle>Lançar Critérios: {evaluation.nome}</CardTitle>
           <div className="flex gap-2">
             <Button variant="outline" onClick={onBack} disabled={isSaving}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
             </Button>
             <Button onClick={handleSaveAll} disabled={isSaving}>
-              {isSaving ? "Salvando..." : "Salvar Notas"}
+              {isSaving ? "Salvando..." : "Salvar Critérios"}
             </Button>
           </div>
         </div>
@@ -264,7 +264,7 @@ function GradingView({ evaluation, students, onBack }: { evaluation: any, studen
           <TableHeader>
             <TableRow>
               <TableHead>Aluno</TableHead>
-              <TableHead>Nota (Máx: {evaluation.notaMaxima})</TableHead>
+              <TableHead>Critério (Máx: {evaluation.notaMaxima})</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -287,7 +287,7 @@ function GradingView({ evaluation, students, onBack }: { evaluation: any, studen
       </CardContent>
       <CardFooter className="flex justify-end p-6 border-t">
         <Button onClick={handleSaveAll} disabled={isSaving}>
-          {isSaving ? "Salvando..." : "Salvar Notas"}
+          {isSaving ? "Salvando..." : "Salvar Critérios"}
         </Button>
       </CardFooter>
     </Card>
