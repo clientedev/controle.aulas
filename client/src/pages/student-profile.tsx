@@ -5,10 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, User, Mail, Hash, BookOpen, GraduationCap, Calendar, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, User, Mail, Hash, BookOpen, GraduationCap, Calendar, Pencil, Trash2, FileDown } from "lucide-react";
 import type { Aluno, Turma, Nota, Avaliacao, UnidadeCurricular, Frequencia } from "@shared/schema";
 import { LayoutShell } from "@/components/layout-shell";
 import { PhotoGallery } from "@/components/photo-gallery";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -40,6 +42,26 @@ export default function StudentProfile() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
+
+  const exportBoletim = () => {
+    const doc = new jsPDF();
+    doc.text(`Boletim Escolar - ${aluno?.nome}`, 20, 20);
+    doc.text(`Matrícula: ${aluno?.matricula}`, 20, 30);
+    
+    const tableData = aluno?.notas.map(n => [
+      n.unidadeCurricular.nome,
+      n.avaliacao.nome,
+      n.valor.toFixed(1)
+    ]);
+
+    autoTable(doc, {
+      startY: 40,
+      head: [['Unidade Curricular', 'Avaliação', 'Nota']],
+      body: tableData || [],
+    });
+
+    doc.save(`boletim_${aluno?.matricula}.pdf`);
+  };
 
   const { data: aluno, isLoading } = useQuery<AlunoComDetalhes>({
     queryKey: ["/api/alunos", id],
@@ -147,6 +169,10 @@ export default function StudentProfile() {
           </div>
 
           <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={exportBoletim}>
+              <FileDown className="mr-2 h-4 w-4" />
+              Emitir Boletim (PDF)
+            </Button>
             <Dialog open={isEditing} onOpenChange={setIsEditing}>
               <DialogTrigger asChild>
                 <Button variant="outline">
