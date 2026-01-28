@@ -359,6 +359,43 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/turmas/:id/notas-com-criterios", autenticar, async (req, res) => {
+    const turmaId = Number(req.params.id);
+    const alunos = await storage.getAlunosDaTurma(turmaId);
+    const ucs = await storage.getUnidadesCurricularesDaTurma(turmaId);
+    
+    const result = [];
+    for (const aluno of alunos) {
+      for (const uc of ucs) {
+        const avaliacoes = await storage.getAvaliacoesDaUnidadeCurricular(uc.id);
+        let somaNotas = 0;
+        let count = 0;
+        
+        for (const av of avaliacoes) {
+          const studentNotas = await storage.getNotasDoAluno(aluno.id);
+          const nota = studentNotas.find(n => n.avaliacaoId === av.id);
+          if (nota) {
+            somaNotas += nota.valor;
+            count++;
+          }
+        }
+        
+        const notaCriterio = await storage.getNotaCriterio(aluno.id, uc.id);
+        if (notaCriterio) {
+          somaNotas += (notaCriterio.aproveitamento * 100);
+          count++;
+        }
+        
+        result.push({
+          alunoId: aluno.id,
+          unidadeCurricularId: uc.id,
+          notaFinal: count > 0 ? somaNotas / count : 0
+        });
+      }
+    }
+    res.json(result);
+  });
+
   // Object Storage Routes
   registerObjectStorageRoutes(app);
 

@@ -142,7 +142,17 @@ export default function ClassDetails() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="evaluations">
+          <TabsContent value="students" className="animate-in fade-in-50 slide-in-from-bottom-2 duration-300">
+            <StudentsTab enrolledStudents={classData.alunos || []} classId={classId} />
+          </TabsContent>
+
+          <TabsContent value="unidades" className="animate-in fade-in-50 slide-in-from-bottom-2 duration-300">
+            {classData.unidadesCurriculares && (
+              <UnidadesTab classId={classId} unidades={classData.unidadesCurriculares} />
+            )}
+          </TabsContent>
+
+          <TabsContent value="evaluations" className="animate-in fade-in-50 slide-in-from-bottom-2 duration-300">
             <EvaluationsTab 
               evaluations={(classData as any).avaliacoes || []} 
               unidades={classData.unidadesCurriculares || []} 
@@ -154,7 +164,7 @@ export default function ClassDetails() {
             />
           </TabsContent>
 
-          <TabsContent value="grading">
+          <TabsContent value="grading" className="animate-in fade-in-50 slide-in-from-bottom-2 duration-300">
             {gradingEvaluation && (
               <GradingView 
                 evaluation={gradingEvaluation} 
@@ -164,12 +174,27 @@ export default function ClassDetails() {
             )}
           </TabsContent>
 
-          <TabsContent value="final-grades">
+          <TabsContent value="attendance" className="animate-in fade-in-50 slide-in-from-bottom-2 duration-300">
+            <AttendanceTab classId={classId} students={classData.alunos || []} />
+          </TabsContent>
+
+          <TabsContent value="grades" className="animate-in fade-in-50 slide-in-from-bottom-2 duration-300">
+            <GradesTab 
+              classId={classId} 
+              students={classData.alunos || []} 
+            />
+          </TabsContent>
+
+          <TabsContent value="final-grades" className="animate-in fade-in-50 slide-in-from-bottom-2 duration-300">
             <FinalGradesTab 
               classId={classId}
               students={classData.alunos || []}
               unidades={classData.unidadesCurriculares || []}
             />
+          </TabsContent>
+
+          <TabsContent value="totem" className="animate-in fade-in-50 slide-in-from-bottom-2 duration-300">
+            <TotemTab classId={classId} className={classData.nome} />
           </TabsContent>
         </Tabs>
       </div>
@@ -233,6 +258,14 @@ function GradingView({ evaluation, students, onBack }: { evaluation: any, studen
 
 function FinalGradesTab({ classId, students, unidades }: { classId: number, students: any[], unidades: any[] }) {
   const { data: grades } = useClassGrades(classId);
+  const { data: allNotes } = useQuery<any[]>({
+    queryKey: ["/api/all-notes", classId],
+    queryFn: async () => {
+      const res = await fetch(`/api/turmas/${classId}/notas-com-criterios`);
+      if (!res.ok) return [];
+      return res.json();
+    }
+  });
   
   return (
     <Card>
@@ -263,9 +296,11 @@ function FinalGradesTab({ classId, students, unidades }: { classId: number, stud
                   // Simplificação: Se houver integração com critérios, a média final pode ser a média simples entre avaliações e a nota de critérios
                   // Como não temos a nota de critérios agregada aqui facilmente sem mais queries, vamos mostrar a média das avaliações por enquanto
                   // O usuário pediu "Média de todas avaliações + a do critério"
+                  const studentData = allNotes?.find(n => n.alunoId === student.id && n.unidadeCurricularId === uc.id);
+                  const finalGrade = studentData?.notaFinal ?? evaluationsAvg;
                   
                   return <TableCell key={uc.id} className="text-center font-bold">
-                    {evaluationsAvg.toFixed(1)}
+                    {Number(finalGrade).toFixed(1)}
                   </TableCell>;
                 })}
               </TableRow>
@@ -1214,6 +1249,7 @@ function EvaluationsTab({ evaluations, unidades, classId, onStartGrading }: { ev
                             variant="ghost" 
                             className="hover:bg-primary/10 text-primary"
                             onClick={() => onStartGrading(evalu)}
+                            data-testid={`button-grade-evaluation-${evalu.id}`}
                           >
                             <Plus className="h-4 w-4" />
                           </Button>
@@ -1351,7 +1387,7 @@ function DetailsSkeleton() {
           </div>
         </div>
         <div className="flex gap-4 border-b pb-px">
-          {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-10 w-24" />)}
+          {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-10 w-24" />)}
         </div>
         <Skeleton className="h-96 w-full rounded-xl" />
       </div>
