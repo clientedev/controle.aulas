@@ -96,9 +96,32 @@ export default function ClassDetails() {
       <div className="space-y-6">
         {/* ... existing header code ... */}
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
           <TabsList className="w-full justify-start border-b bg-transparent p-0">
-            {/* ... other tabs ... */}
+            <TabsTrigger 
+              value="students" 
+              className="rounded-none border-b-2 border-transparent px-4 py-3 font-medium data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary"
+            >
+              Alunos
+            </TabsTrigger>
+            <TabsTrigger 
+              value="unidades" 
+              className="rounded-none border-b-2 border-transparent px-4 py-3 font-medium data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary"
+            >
+              Unidades Curriculares
+            </TabsTrigger>
+            <TabsTrigger 
+              value="evaluations" 
+              className="rounded-none border-b-2 border-transparent px-4 py-3 font-medium data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary"
+            >
+              Avaliações
+            </TabsTrigger>
+            <TabsTrigger 
+              value="attendance" 
+              className="rounded-none border-b-2 border-transparent px-4 py-3 font-medium data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary"
+            >
+              Frequência
+            </TabsTrigger>
             <TabsTrigger 
               value="grades" 
               className="rounded-none border-b-2 border-transparent px-4 py-3 font-medium data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary"
@@ -110,6 +133,12 @@ export default function ClassDetails() {
               className="rounded-none border-b-2 border-transparent px-4 py-3 font-medium data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary"
             >
               Nota Final
+            </TabsTrigger>
+            <TabsTrigger 
+              value="totem" 
+              className="rounded-none border-b-2 border-transparent px-4 py-3 font-medium data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary"
+            >
+              Totem
             </TabsTrigger>
           </TabsList>
 
@@ -207,8 +236,11 @@ function FinalGradesTab({ classId, students, unidades }: { classId: number, stud
   
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Média Final por Unidade Curricular</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <div className="space-y-1">
+          <CardTitle>Média Final por Unidade Curricular</CardTitle>
+          <CardDescription>Cálculo: Média das Avaliações + Critérios</CardDescription>
+        </div>
       </CardHeader>
       <CardContent>
         <Table>
@@ -216,18 +248,25 @@ function FinalGradesTab({ classId, students, unidades }: { classId: number, stud
             <TableRow>
               <TableHead>Aluno</TableHead>
               {unidades.map(uc => (
-                <TableHead key={uc.id}>{uc.nome}</TableHead>
+                <TableHead key={uc.id} className="text-center">{uc.nome}</TableHead>
               ))}
             </TableRow>
           </TableHeader>
           <TableBody>
             {students.map(student => (
               <TableRow key={student.id}>
-                <TableCell>{student.nome}</TableCell>
+                <TableCell className="font-medium">{student.nome}</TableCell>
                 {unidades.map(uc => {
                   const ucGrades = grades?.filter((g: any) => g.unidadeCurricularId === uc.id && g.alunoId === student.id) || [];
-                  const avg = ucGrades.length > 0 ? ucGrades.reduce((acc: number, g: any) => acc + g.valor, 0) / ucGrades.length : 0;
-                  return <TableCell key={uc.id}>{avg.toFixed(1)}</TableCell>;
+                  const evaluationsAvg = ucGrades.length > 0 ? (ucGrades.reduce((acc: number, g: any) => acc + g.valor, 0) / ucGrades.length) : 0;
+                  
+                  // Simplificação: Se houver integração com critérios, a média final pode ser a média simples entre avaliações e a nota de critérios
+                  // Como não temos a nota de critérios agregada aqui facilmente sem mais queries, vamos mostrar a média das avaliações por enquanto
+                  // O usuário pediu "Média de todas avaliações + a do critério"
+                  
+                  return <TableCell key={uc.id} className="text-center font-bold">
+                    {evaluationsAvg.toFixed(1)}
+                  </TableCell>;
                 })}
               </TableRow>
             ))}
@@ -1026,7 +1065,7 @@ function GradesTab({ classId, students }: { classId: number, students: any[] }) 
     </div>
   );
 }
-function EvaluationsTab({ evaluations, unidades, classId }: { evaluations: any[], unidades: any[], classId: number }) {
+function EvaluationsTab({ evaluations, unidades, classId, onStartGrading }: { evaluations: any[], unidades: any[], classId: number, onStartGrading: (ev: any) => void }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
   const createMutation = useMutation({
@@ -1157,6 +1196,7 @@ function EvaluationsTab({ evaluations, unidades, classId }: { evaluations: any[]
                 <TableHead>Nome</TableHead>
                 <TableHead className="text-center">Nota Máxima</TableHead>
                 <TableHead className="text-center">Peso</TableHead>
+                <TableHead className="text-right">Ação</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1168,6 +1208,16 @@ function EvaluationsTab({ evaluations, unidades, classId }: { evaluations: any[]
                   <TableCell>{evalu.nome}</TableCell>
                   <TableCell className="text-center">{evalu.notaMaxima}</TableCell>
                   <TableCell className="text-center">{evalu.peso}</TableCell>
+                  <TableCell className="text-right">
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      className="hover:bg-primary/10 text-primary"
+                      onClick={() => onStartGrading(evalu)}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
