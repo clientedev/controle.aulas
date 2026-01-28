@@ -81,9 +81,7 @@ export default function FrequencyRegistration() {
         let cacheUpdated = false;
         
         for (const key in cacheData) {
-          // Se for uma entrada de objectPath que não está mais na lista de fotos atuais
           if (key.length > 50 && key.includes('/') && !currentPhotoPaths.has(key)) {
-            console.log(`Totem: Removendo cache órfão: ${key}`);
             delete cacheData[key];
             cacheUpdated = true;
           }
@@ -92,70 +90,55 @@ export default function FrequencyRegistration() {
         if (cacheUpdated) {
           localStorage.setItem("face_descriptors_cache", JSON.stringify(cacheData));
         }
-        
-        let processed = 0;
-        for (const photo of studentPhotos) {
-          try {
-            processed++;
-            setProcessingProgress(Math.round((processed / studentPhotos.length) * 100));
-            const cacheKey = photo.objectPath || photo.fotoBase64?.substring(0, 100);
-            if (cacheKey && cacheData[cacheKey]) {
-              loadedDescriptors.push({
-                alunoId: photo.alunoId,
-                descriptor: new Float32Array(Object.values(cacheData[cacheKey]))
-              });
-              continue;
-            }
 
-            let studentImg: HTMLImageElement;
-            if (photo.fotoBase64 && photo.fotoBase64.trim().length > 50) {
-              try {
+        // Processamento em PARALELO para maior velocidade
+        const batchSize = 5;
+        for (let i = 0; i < studentPhotos.length; i += batchSize) {
+          const batch = studentPhotos.slice(i, i + batchSize);
+          await Promise.all(batch.map(async (photo) => {
+            try {
+              const cacheKey = photo.objectPath || photo.fotoBase64?.substring(0, 100);
+              if (cacheKey && cacheData[cacheKey]) {
+                loadedDescriptors.push({
+                  alunoId: photo.alunoId,
+                  descriptor: new Float32Array(Object.values(cacheData[cacheKey]))
+                });
+                return;
+              }
+
+              let studentImg: HTMLImageElement;
+              if (photo.fotoBase64 && photo.fotoBase64.trim().length > 50) {
                 let cleanBase64 = photo.fotoBase64.trim();
-                
-                // Validação rigorosa: se não tiver o header ou for apenas o header, abortar
                 if (!cleanBase64.includes(',') && !cleanBase64.startsWith('data:')) {
                   cleanBase64 = `data:image/jpeg;base64,${cleanBase64}`;
                 }
-                
-                // Se a string for apenas o prefixo "data:image/jpeg;base64," ou similar
-                if (cleanBase64.endsWith(',') || cleanBase64.length < 100) {
-                  console.warn("Totem: Foto base64 inválida ou muito curta detectada, pulando.");
-                  continue;
-                }
-
                 studentImg = await faceapi.fetchImage(cleanBase64);
-              } catch (imgErr) {
-                console.error("Erro ao carregar imagem base64:", imgErr);
-                continue;
+              } else if (photo.objectPath) {
+                const url = `/api/uploads/url?objectPath=${encodeURIComponent(photo.objectPath)}`;
+                studentImg = await faceapi.fetchImage(url);
+              } else {
+                return;
               }
-            } else if (photo.objectPath) {
-              const url = `/api/uploads/url?objectPath=${encodeURIComponent(photo.objectPath)}`;
-              studentImg = await faceapi.fetchImage(url);
-            } else {
-              continue;
-            }
 
-            // Usar SSD MobileNet v1 para máxima precisão
-            const detection = await faceapi.detectSingleFace(studentImg, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })).withFaceLandmarks().withFaceDescriptor();
-            if (detection) {
-              const descriptorArray = Array.from(detection.descriptor);
-              if (cacheKey) cacheData[cacheKey] = descriptorArray;
-              
-              loadedDescriptors.push({
-                alunoId: photo.alunoId,
-                descriptor: detection.descriptor
-              });
-              console.log(`Totem: Descriptor gerado para aluno ${photo.alunoId} (${photo.studentName})`);
+              const detection = await faceapi.detectSingleFace(studentImg, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })).withFaceLandmarks().withFaceDescriptor();
+              if (detection) {
+                const descriptorArray = Array.from(detection.descriptor);
+                if (cacheKey) cacheData[cacheKey] = descriptorArray;
+                loadedDescriptors.push({
+                  alunoId: photo.alunoId,
+                  descriptor: detection.descriptor
+                });
+              }
+            } catch (e) {
+              console.error("Error processing photo", e);
             }
-          } catch (e) {
-            console.error("Error processing photo for descriptor", e);
-          }
+          }));
+          setProcessingProgress(Math.round(((i + batch.length) / studentPhotos.length) * 100));
         }
         
         localStorage.setItem("face_descriptors_cache", JSON.stringify(cacheData));
         setDescriptors(loadedDescriptors);
         setIsProcessingModels(false);
-        console.log(`Totem: Processamento concluído. ${loadedDescriptors.length} faces carregadas.`);
       };
       processDescriptors();
     }
@@ -373,30 +356,31 @@ export default function FrequencyRegistration() {
           <h1 className="text-2xl md:text-4xl font-bold font-display text-primary">Totem SENAI</h1>
           <p className="text-sm md:text-lg text-muted-foreground mt-1 md:mt-2">Registro de presença automático.</p>
         </div>
-        {isTotem && (
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                localStorage.removeItem("face_descriptors_cache");
-                window.location.reload();
-              }}
-              title="Limpar cache de faces"
-            >
-              <Loader2 className="h-4 w-4" />
-            </Button>
+        <div className="flex gap-2 relative z-50">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => {
+              localStorage.removeItem("face_descriptors_cache");
+              window.location.reload();
+            }}
+            className="h-9 w-9 border-primary/20 hover:bg-primary/10"
+            title="Limpar cache de faces"
+          >
+            <Loader2 className="h-4 w-4" />
+          </Button>
+          {isTotem && (
             <Button 
               variant="outline" 
               size="sm" 
               onClick={() => logout.mutate()}
-              className="gap-2"
+              className="gap-2 border-primary/20"
             >
               <LogOut className="h-4 w-4" />
               Sair do Terminal
             </Button>
-          </div>
-        )}
+          )}
+        </div>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8 items-start">
