@@ -115,21 +115,24 @@ export default function FrequencyRegistration() {
               }
 
               let studentImg: HTMLImageElement;
-              if (photo.fotoBase64 && photo.fotoBase64.trim().length > 50) {
-                let cleanBase64 = photo.fotoBase64.trim();
-                // Validar se não é apenas um cabeçalho vazio "data:,"
-                if (cleanBase64 === "data:," || cleanBase64.length < 100) {
-                  console.warn("Foto base64 inválida ou muito curta para o aluno", photo.alunoId);
+              try {
+                if (photo.fotoBase64 && photo.fotoBase64.trim().length > 100) {
+                  let cleanBase64 = photo.fotoBase64.trim();
+                  if (cleanBase64 === "data:," || cleanBase64.startsWith("data:,") && cleanBase64.length < 50) {
+                    return;
+                  }
+                  if (!cleanBase64.includes(',') && !cleanBase64.startsWith('data:')) {
+                    cleanBase64 = `data:image/jpeg;base64,${cleanBase64}`;
+                  }
+                  studentImg = await faceapi.fetchImage(cleanBase64);
+                } else if (photo.objectPath) {
+                  const url = `/api/uploads/url?objectPath=${encodeURIComponent(photo.objectPath)}`;
+                  studentImg = await faceapi.fetchImage(url);
+                } else {
                   return;
                 }
-                if (!cleanBase64.includes(',') && !cleanBase64.startsWith('data:')) {
-                  cleanBase64 = `data:image/jpeg;base64,${cleanBase64}`;
-                }
-                studentImg = await faceapi.fetchImage(cleanBase64);
-              } else if (photo.objectPath) {
-                const url = `/api/uploads/url?objectPath=${encodeURIComponent(photo.objectPath)}`;
-                studentImg = await faceapi.fetchImage(url);
-              } else {
+              } catch (imgErr) {
+                console.warn("Erro ao carregar imagem do aluno", photo.alunoId, imgErr);
                 return;
               }
 
