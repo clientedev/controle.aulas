@@ -8,11 +8,15 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Aluno, FotoAluno } from "@shared/schema";
 import { Loader2, Camera, CheckCircle, XCircle } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useRoute } from "wouter";
 
 import { useAuth } from "@/hooks/use-auth";
-import { LogOut } from "lucide-react";
+import { LogOut, RefreshCw } from "lucide-react";
 
 export default function FrequencyRegistration() {
+  const [match, params] = useRoute("/frequency-registration/:turmaId?");
+  const turmaId = params?.turmaId ? parseInt(params.turmaId) : null;
+  
   const { user, logout } = useAuth();
   const isTotem = user?.perfil === "totem";
   const [modelsLoaded, setModelsLoaded] = useState(false);
@@ -32,11 +36,11 @@ export default function FrequencyRegistration() {
   const recognitionCooldown = 5000; // 5 segundos entre registros do mesmo rosto
 
   const { data: students } = useQuery<Aluno[]>({
-    queryKey: ["/api/alunos"],
+    queryKey: turmaId ? [`/api/turmas/${turmaId}/alunos`] : ["/api/alunos"],
   });
 
   const { data: studentPhotos } = useQuery<(FotoAluno & { studentName: string })[]>({
-    queryKey: ["/api/all-student-photos"],
+    queryKey: turmaId ? [`/api/turmas/${turmaId}/fotos`] : ["/api/all-student-photos"],
     enabled: !!students,
   });
 

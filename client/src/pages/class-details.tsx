@@ -245,6 +245,12 @@ export default function ClassDetails() {
             >
               Notas
             </TabsTrigger>
+            <TabsTrigger 
+              value="totem" 
+              className="rounded-none border-b-2 border-transparent px-4 py-3 font-medium data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary"
+            >
+              Totem
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="students" className="animate-in fade-in-50 slide-in-from-bottom-2 duration-300">
@@ -275,9 +281,71 @@ export default function ClassDetails() {
               students={classData.alunos || []} 
             />
           </TabsContent>
+
+          <TabsContent value="totem" className="animate-in fade-in-50 slide-in-from-bottom-2 duration-300">
+            <TotemTab classId={classId} className={classData.nome} />
+          </TabsContent>
         </Tabs>
       </div>
     </LayoutShell>
+  );
+}
+
+function TotemTab({ classId, className }: { classId: number, className: string }) {
+  const totemUrl = `${window.location.origin}/frequency/${classId}`;
+  const { toast } = useToast();
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(totemUrl);
+    toast({
+      title: "Link copiado!",
+      description: "O link do totem exclusivo desta turma foi copiado para a área de transferência.",
+    });
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Totem Exclusivo</CardTitle>
+        <CardDescription>
+          Gere um link de acesso rápido para o registro de presença desta turma específica.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex flex-col gap-4 p-6 border-2 border-dashed rounded-xl bg-muted/30 items-center text-center">
+          <Camera className="h-12 w-12 text-primary opacity-50 mb-2" />
+          <div className="space-y-2 max-w-md">
+            <h3 className="font-bold text-lg">Modo Totem: {className}</h3>
+            <p className="text-sm text-muted-foreground">
+              Este link abrirá o sistema de reconhecimento facial filtrado apenas para os alunos desta turma, tornando a identificação muito mais rápida e precisa.
+            </p>
+          </div>
+          
+          <div className="flex w-full max-w-md gap-2 mt-2">
+            <Input readOnly value={totemUrl} className="bg-background" />
+            <Button onClick={copyLink} size="icon" variant="outline" className="shrink-0">
+              <Plus className="h-4 w-4 rotate-45" />
+            </Button>
+          </div>
+
+          <div className="flex gap-3 mt-4">
+            <Button asChild variant="default">
+              <a href={`/frequency/${classId}`} target="_blank" rel="noreferrer">
+                Abrir Totem da Turma
+              </a>
+            </Button>
+          </div>
+        </div>
+        
+        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800 flex gap-3">
+          <AlertCircle className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+          <div className="text-sm text-blue-800 dark:text-blue-300">
+            <p className="font-bold mb-1">Dica de Uso:</p>
+            <p>Use este link em tablets ou computadores fixos na entrada da sala de aula. O sistema carregará apenas as fotos dos alunos matriculados nesta turma.</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

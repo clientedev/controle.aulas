@@ -291,11 +291,23 @@ export async function registerRoutes(
   });
 
   // Horários
-  app.get("/api/turmas/:id/horarios", autenticar, async (req, res) => {
-    const id = Number(req.params.id);
-    const result = await storage.getHorariosDaTurma(id);
-    res.json(result);
+  app.get("/api/turmas/:id/fotos", autenticar, async (req, res) => {
+    const turmaId = Number(req.params.id);
+    const alunos = await storage.getAlunosDaTurma(turmaId);
+    const fotos = [];
+    for (const aluno of alunos) {
+      const alunoFotos = await storage.getFotosDoAluno(aluno.id);
+      fotos.push(...alunoFotos.map(f => ({ ...f, studentName: aluno.nome })));
+    }
+    res.json(fotos);
   });
+
+  app.get("/api/turmas/:id/alunos", autenticar, async (req, res) => {
+    const id = Number(req.params.id);
+    const alunos = await storage.getAlunosDaTurma(id);
+    res.json(alunos);
+  });
+
 
   app.post("/api/turmas/:id/horarios", autenticar, async (req: any, res) => {
     const id = Number(req.params.id);

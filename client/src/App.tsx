@@ -120,6 +120,9 @@ function Router() {
       <Route path="/frequency">
         {(params) => <ProtectedRoute component={FrequencyRegistration} path="/frequency" {...params} />}
       </Route>
+      <Route path="/frequency/:turmaId">
+        {(params) => <ProtectedRoute component={FrequencyRegistration} path="/frequency/:turmaId" {...params} />}
+      </Route>
       <Route path="/historico-presenca">
         {(params) => <ProtectedRoute component={AttendanceHistory} path="/historico-presenca" {...params} />}
       </Route>
