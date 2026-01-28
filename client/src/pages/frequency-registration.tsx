@@ -119,7 +119,7 @@ export default function FrequencyRegistration() {
             }
 
             // Usar TinyFaceDetector com configurações equilibradas
-            const detection = await faceapi.detectSingleFace(studentImg, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 })).withFaceLandmarks().withFaceDescriptor();
+            const detection = await faceapi.detectSingleFace(studentImg, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.6 })).withFaceLandmarks().withFaceDescriptor();
             if (detection) {
               const descriptorArray = Array.from(detection.descriptor);
               if (cacheKey) cacheData[cacheKey] = descriptorArray;
@@ -200,7 +200,7 @@ export default function FrequencyRegistration() {
     try {
       const input = await faceapi.fetchImage(base64Image);
       // Configurações equilibradas para precisão e velocidade
-      const detection = await faceapi.detectSingleFace(input, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+      const detection = await faceapi.detectSingleFace(input, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.6 }))
         .withFaceLandmarks()
         .withFaceDescriptor();
 
@@ -216,7 +216,7 @@ export default function FrequencyRegistration() {
       }
 
       let bestMatch: { student: Aluno; distance: number } | null = null;
-      let minDistance = 0.45; // Limiar mais rigoroso para evitar falsos positivos
+      let minDistance = 0.40; // Limiar mais rigoroso para evitar falsos positivos
 
       for (const item of descriptors) {
         const distance = faceapi.euclideanDistance(detection.descriptor, item.descriptor);
@@ -232,7 +232,7 @@ export default function FrequencyRegistration() {
         }
       }
 
-      if (bestMatch && minDistance < 0.45) { // Limiar ajustado para melhor precisão
+      if (bestMatch && minDistance < 0.40) { // Limiar ajustado para melhor precisão
         console.log("Totem: Aluno identificado!", bestMatch.student.nome);
         
         // Registrar presença PRIMEIRO
@@ -445,7 +445,7 @@ export default function FrequencyRegistration() {
                 </div>
                 <h3 className="text-3xl font-bold text-primary mb-2 uppercase">{recognitionResult.aluno.nome}</h3>
                 <p className="text-xl text-muted-foreground mb-2">RA: {recognitionResult.aluno.matricula}</p>
-                <p className="text-xs text-muted-foreground mb-6">Distância: {recognitionResult.distance.toFixed(4)} (Confiança: {Math.round((0.45 - recognitionResult.distance) / 0.45 * 100)}%)</p>
+                <p className="text-xs text-muted-foreground mb-6">Distância: {recognitionResult.distance.toFixed(4)} (Confiança: {Math.round((0.40 - recognitionResult.distance) / 0.40 * 100)}%)</p>
                 
                 <div className="inline-block px-6 py-3 bg-primary text-white rounded-2xl text-lg font-bold shadow-md">
                   PRESENÇA CONFIRMADA
