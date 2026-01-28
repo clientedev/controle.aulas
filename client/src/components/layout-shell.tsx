@@ -92,7 +92,7 @@ export function LayoutShell({ children }: { children: ReactNode }) {
       {/* Mobile Sidebar */}
       <Sheet>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="fixed left-4 top-4 z-50 md:hidden">
+          <Button variant="ghost" size="icon" className="fixed left-4 top-4 z-50 md:hidden bg-background/80 backdrop-blur-sm border shadow-sm">
             <Menu className="h-6 w-6" />
           </Button>
         </SheetTrigger>

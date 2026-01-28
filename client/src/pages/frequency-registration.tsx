@@ -350,34 +350,35 @@ export default function FrequencyRegistration() {
   });
 
   const content = (
-    <div className="max-w-4xl mx-auto space-y-6 px-4 md:px-0">
-      <header className="flex items-center justify-between pt-4">
-        <div className="text-center md:text-left">
-          <h1 className="text-3xl md:text-4xl font-bold font-display text-primary">Bem-vindo ao Totem SENAI</h1>
-          <p className="text-lg text-muted-foreground mt-2">Aguardando aluno para registro de presença automático.</p>
+    <div className="max-w-4xl mx-auto space-y-4 md:space-y-6 px-0 md:px-0">
+      <header className="flex flex-col md:flex-row items-center justify-between pt-4 gap-4 text-center md:text-left">
+        <div>
+          <h1 className="text-2xl md:text-4xl font-bold font-display text-primary">Totem SENAI</h1>
+          <p className="text-sm md:text-lg text-muted-foreground mt-1 md:mt-2">Registro de presença automático.</p>
         </div>
         {isTotem && (
           <Button 
-            variant="ghost" 
-            size="icon" 
+            variant="outline" 
+            size="sm" 
             onClick={() => logout.mutate()}
-            title="Sair do Terminal"
+            className="gap-2"
           >
-            <LogOut className="h-5 w-5" />
+            <LogOut className="h-4 w-4" />
+            Sair do Terminal
           </Button>
         )}
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-        <Card className="overflow-hidden border-2 border-primary/10 shadow-xl rounded-2xl">
-          <CardHeader className="bg-primary/5 border-b">
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <Camera className="h-6 w-6 text-primary" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8 items-start">
+        <Card className="overflow-hidden border-2 border-primary/10 shadow-lg rounded-xl md:rounded-2xl">
+          <CardHeader className="bg-primary/5 border-b p-4 md:p-6">
+            <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+              <Camera className="h-5 w-5 md:h-6 md:w-6 text-primary" />
               Área de Captura
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-6 flex flex-col items-center gap-6">
-            <div className="relative aspect-square w-full max-w-[400px] bg-black rounded-3xl overflow-hidden border-4 border-muted shadow-inner">
+          <CardContent className="p-4 md:p-6 flex flex-col items-center gap-4 md:gap-6">
+            <div className="relative aspect-square w-full max-w-[400px] bg-black rounded-2xl md:rounded-3xl overflow-hidden border-2 md:border-4 border-muted shadow-inner">
               {isScanning ? (
                 <video
                   ref={videoRef}
@@ -389,16 +390,16 @@ export default function FrequencyRegistration() {
               ) : capturedImage ? (
                 <img src={capturedImage} className="w-full h-full object-cover scale-x-[-1]" alt="Captura" />
               ) : (
-                <div className="flex flex-col items-center justify-center h-full text-white/50 space-y-4">
-                  <Loader2 className="h-12 w-12 animate-spin" />
-                  <p className="italic">Iniciando sistema...</p>
+                <div className="flex flex-col items-center justify-center h-full text-white/50 space-y-4 p-4 text-center">
+                  <Loader2 className="h-10 w-10 md:h-12 md:w-12 animate-spin" />
+                  <p className="italic text-sm md:text-base">Iniciando sistema...</p>
                 </div>
               )}
               
               {/* Overlay de guia facial */}
               {isScanning && (
-                <div className="absolute inset-0 border-[40px] border-black/40 pointer-events-none">
-                  <div className="w-full h-full border-2 border-dashed border-white/50 rounded-[100px]" />
+                <div className="absolute inset-0 border-[20px] md:border-[40px] border-black/40 pointer-events-none">
+                  <div className="w-full h-full border-2 border-dashed border-white/50 rounded-[60px] md:rounded-[100px]" />
                 </div>
               )}
               
@@ -406,13 +407,13 @@ export default function FrequencyRegistration() {
             </div>
 
             {!modelsLoaded || isProcessingModels ? (
-              <div className="flex flex-col items-center gap-3 w-full">
-                <div className="flex items-center gap-3 text-primary font-medium">
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  <span>{isProcessingModels ? `Otimizando banco de faces (${processingProgress}%)...` : "Carregando IA..."}</span>
+              <div className="flex flex-col items-center gap-2 md:gap-3 w-full">
+                <div className="flex items-center gap-2 md:gap-3 text-primary font-medium text-sm md:text-base">
+                  <Loader2 className="h-4 w-4 md:h-5 md:w-5 animate-spin" />
+                  <span>{isProcessingModels ? `Otimizando faces (${processingProgress}%)...` : "Carregando IA..."}</span>
                 </div>
                 {isProcessingModels && (
-                  <div className="w-full bg-muted h-2 rounded-full overflow-hidden">
+                  <div className="w-full bg-muted h-1.5 md:h-2 rounded-full overflow-hidden">
                     <div 
                       className="bg-primary h-full transition-all duration-300" 
                       style={{ width: `${processingProgress}%` }}
@@ -423,57 +424,54 @@ export default function FrequencyRegistration() {
             ) : (
               <div className="w-full">
                 {!totemActive && (
-                  <Button onClick={startVideo} size="lg" className="w-full text-lg h-14 rounded-xl shadow-lg hover:scale-[1.02] transition-transform">
-                    Ativar Câmera do Totem
+                  <Button onClick={startVideo} size="lg" className="w-full text-base md:text-lg h-12 md:h-14 rounded-xl shadow-lg">
+                    Ativar Câmera
                   </Button>
                 )}
-                {/* Botão Encerrar Câmera removido a pedido do usuário */}
               </div>
             )}
           </CardContent>
         </Card>
 
-        <Card className="h-full border-2 border-primary/10 shadow-xl rounded-2xl min-h-[400px] flex flex-col">
-          <CardHeader className="bg-primary/5 border-b">
-            <CardTitle className="text-xl">Status do Registro</CardTitle>
+        <Card className="border-2 border-primary/10 shadow-lg rounded-xl md:rounded-2xl min-h-[300px] md:min-h-[400px] flex flex-col">
+          <CardHeader className="bg-primary/5 border-b p-4 md:p-6">
+            <CardTitle className="text-lg md:text-xl">Status do Registro</CardTitle>
           </CardHeader>
-          <CardContent className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+          <CardContent className="flex-1 flex flex-col items-center justify-center p-6 md:p-8 text-center">
             {recognitionResult ? (
               <div className="animate-in zoom-in slide-in-from-bottom-4 duration-500 w-full">
-                <div className="bg-green-100 dark:bg-green-900/30 p-6 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-6">
-                  <CheckCircle className="h-16 w-16 text-green-600" />
+                <div className="bg-green-100 dark:bg-green-900/30 p-4 md:p-6 rounded-full w-20 h-20 md:w-24 md:h-24 flex items-center justify-center mx-auto mb-4 md:mb-6">
+                  <CheckCircle className="h-12 w-12 md:h-16 md:w-16 text-green-600" />
                 </div>
-                <h3 className="text-3xl font-bold text-primary mb-2 uppercase">{recognitionResult.aluno.nome}</h3>
-                <p className="text-xl text-muted-foreground mb-2">RA: {recognitionResult.aluno.matricula}</p>
-                <p className="text-xs text-muted-foreground mb-6">Distância: {recognitionResult.distance.toFixed(4)} (Confiança: {Math.round((0.40 - recognitionResult.distance) / 0.40 * 100)}%)</p>
+                <h3 className="text-2xl md:text-3xl font-bold text-primary mb-1 md:mb-2 uppercase truncate">{recognitionResult.aluno.nome}</h3>
+                <p className="text-lg md:text-xl text-muted-foreground mb-1 md:mb-2">RA: {recognitionResult.aluno.matricula}</p>
+                <p className="text-[10px] md:text-xs text-muted-foreground mb-4 md:mb-6">Confiança: {Math.round((0.40 - recognitionResult.distance) / 0.40 * 100)}%</p>
                 
-                <div className="inline-block px-6 py-3 bg-primary text-white rounded-2xl text-lg font-bold shadow-md">
+                <div className="inline-block px-4 py-2 md:px-6 md:py-3 bg-primary text-white rounded-xl md:rounded-2xl text-base md:text-lg font-bold shadow-md">
                   PRESENÇA CONFIRMADA
                 </div>
                 
-                <p className="mt-8 text-sm text-muted-foreground">
-                  Sistema pronto para o próximo aluno.
-                </p>
                 <Button 
                   onClick={startVideo}
-                  className="mt-4 w-full h-12 rounded-xl"
+                  className="mt-6 md:mt-8 w-full h-10 md:h-12 rounded-xl"
+                  variant="outline"
                 >
-                  Ativar Totem Novamente
+                  Próximo Aluno
                 </Button>
               </div>
             ) : capturedImage ? (
               <div className="space-y-4">
-                <Loader2 className="h-16 w-16 animate-spin text-primary mx-auto" />
-                <p className="text-xl font-medium text-primary">Validando identidade...</p>
+                <Loader2 className="h-12 w-12 md:h-16 md:w-16 animate-spin text-primary mx-auto" />
+                <p className="text-lg md:text-xl font-medium text-primary">Validando identidade...</p>
               </div>
             ) : (
-              <div className="space-y-6 opacity-40">
-                <div className="bg-muted p-8 rounded-full w-32 h-32 flex items-center justify-center mx-auto">
-                  <Camera className="h-16 w-16" />
+              <div className="space-y-4 md:space-y-6 opacity-40">
+                <div className="bg-muted p-6 md:p-8 rounded-full w-24 h-24 md:w-32 md:h-32 flex items-center justify-center mx-auto">
+                  <Camera className="h-12 w-12 md:h-16 md:w-16" />
                 </div>
-                <div className="space-y-2">
-                  <p className="text-2xl font-bold">Aguardando Face</p>
-                  <p className="text-muted-foreground">Posicione-se para identificação automática</p>
+                <div className="space-y-1 md:space-y-2">
+                  <p className="text-xl md:text-2xl font-bold">Aguardando Face</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Posicione-se para identificação</p>
                 </div>
               </div>
             )}
@@ -481,10 +479,9 @@ export default function FrequencyRegistration() {
         </Card>
       </div>
       
-      {/* Rodapé Informativo para Tablet */}
-      <footer className="mt-12 p-6 bg-muted/30 rounded-2xl border border-dashed border-primary/20 text-center">
-        <p className="text-sm text-muted-foreground">
-          Sistema de Frequência Inteligente SENAI-SP • Reconhecimento Facial em Tempo Real
+      <footer className="mt-8 md:mt-12 p-4 md:p-6 bg-muted/30 rounded-xl border border-dashed border-primary/20 text-center">
+        <p className="text-[10px] md:text-sm text-muted-foreground">
+          Sistema SENAI-SP • Reconhecimento Facial
         </p>
       </footer>
     </div>
