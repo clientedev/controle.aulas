@@ -403,23 +403,46 @@ export async function registerRoutes(
   });
 
   app.post("/api/unidades-curriculares/:id/criterios", autenticar, async (req, res) => {
-    const ucId = Number(req.params.id);
-    const { criterios } = req.body;
-    
-    if (!Array.isArray(criterios)) {
-      return res.status(400).json({ mensagem: "Formato inválido. Esperado um array de critérios." });
-    }
+    try {
+      const ucId = Number(req.params.id);
+      const { criterios } = req.body;
+      
+      console.log("Recebendo critérios para UC", ucId, ":", JSON.stringify(criterios));
+      
+      if (!Array.isArray(criterios)) {
+        return res.status(400).json({ mensagem: "Formato inválido. Esperado um array de critérios." });
+      }
 
-    const criados = [];
-    for (const item of criterios) {
-      const criado = await storage.criarCriterio({
-        unidadeCurricularId: ucId,
-        descricao: item.descricao,
-        peso: parseFloat(item.peso) || 1.0
-      });
-      criados.push(criado);
+      if (criterios.length === 0) {
+        return res.status(400).json({ mensagem: "Nenhum critério encontrado na planilha." });
+      }
+
+      const criados = [];
+      for (const item of criterios) {
+        // Validar campos obrigatórios
+        if (!item.descricao || typeof item.descricao !== 'string' || item.descricao.trim() === '') {
+          console.warn("Critério sem descrição válida ignorado:", item);
+          continue;
+        }
+        
+        const criado = await storage.criarCriterio({
+          unidadeCurricularId: ucId,
+          descricao: String(item.descricao).trim(),
+          peso: parseFloat(item.peso) || 1.0
+        });
+        criados.push(criado);
+      }
+      
+      if (criados.length === 0) {
+        return res.status(400).json({ mensagem: "Nenhum critério válido encontrado. Verifique se a planilha tem a coluna 'Descrição'." });
+      }
+      
+      console.log("Critérios criados com sucesso:", criados.length);
+      res.json(criados);
+    } catch (error: any) {
+      console.error("Erro ao importar critérios:", error);
+      res.status(500).json({ mensagem: error.message || "Erro interno ao importar critérios" });
     }
-    res.json(criados);
   });
 
   app.get("/api/unidades-curriculares/:ucId/alunos/:alunoId/aproveitamento", autenticar, async (req, res) => {

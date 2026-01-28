@@ -809,14 +809,19 @@ function UnidadesTab({ classId, unidades }: { classId: number, unidades: any[] }
           body: JSON.stringify({ criterios }),
         });
 
-        if (!res.ok) throw new Error("Erro ao importar critérios");
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(errorData.mensagem || "Erro ao importar critérios");
+        }
 
-        toast({ title: "Sucesso", description: `${criterios.length} critérios importados.` });
+        const result = await res.json();
+        toast({ title: "Sucesso", description: `${result.length} critérios importados.` });
         setImportDialogOpen(false);
         queryClient.invalidateQueries({ queryKey: ["/api/turmas", classId] });
-      } catch (err) {
+        queryClient.invalidateQueries({ queryKey: ["/api/unidades-curriculares", selectedUC.id, "criterios"] });
+      } catch (err: any) {
         console.error("Excel import error:", err);
-        toast({ title: "Erro", description: "Falha ao processar Excel", variant: "destructive" });
+        toast({ title: "Erro", description: err.message || "Falha ao processar Excel", variant: "destructive" });
       }
     };
     reader.readAsArrayBuffer(file);
