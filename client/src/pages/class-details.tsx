@@ -122,12 +122,12 @@ export default function ClassDetails() {
             >
               Frequência
             </TabsTrigger>
-            <TabsTrigger 
-              value="grades" 
-              className="rounded-none border-b-2 border-transparent px-4 py-3 font-medium data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary"
-            >
-              Critérios de Avaliação
-            </TabsTrigger>
+          <TabsTrigger 
+            value="grades" 
+            className="rounded-none border-b-2 border-transparent px-4 py-3 font-medium data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary"
+          >
+            Critérios de Avaliação
+          </TabsTrigger>
             <TabsTrigger 
               value="final-grades" 
               className="rounded-none border-b-2 border-transparent px-4 py-3 font-medium data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary"
