@@ -259,7 +259,7 @@ export async function registerRoutes(
       const input = req.body;
       const avaliacao = await storage.criarAvaliacao({ 
         nome: input.nome,
-        notaMaxima: parseFloat(input.notaMaxima) || 10,
+        notaMaxima: parseFloat(input.notaMaxima) || 100,
         peso: parseFloat(input.peso) || 1,
         unidadeCurricularId 
       });
@@ -380,16 +380,23 @@ export async function registerRoutes(
           }
         }
         
+        const avaliacoesAvg = count > 0 ? somaNotas / count : 0;
         const notaCriterio = await storage.getNotaCriterio(aluno.id, uc.id);
-        if (notaCriterio) {
-          somaNotas += (notaCriterio.aproveitamento * 100);
-          count++;
+        const criteriosScore = notaCriterio ? (notaCriterio.aproveitamento * 100) : 0;
+        
+        let finalGrade = 0;
+        if (count > 0 && notaCriterio) {
+          finalGrade = (avaliacoesAvg + criteriosScore) / 2;
+        } else if (count > 0) {
+          finalGrade = avaliacoesAvg;
+        } else if (notaCriterio) {
+          finalGrade = criteriosScore;
         }
         
         result.push({
           alunoId: aluno.id,
           unidadeCurricularId: uc.id,
-          notaFinal: count > 0 ? somaNotas / count : 0
+          notaFinal: finalGrade
         });
       }
     }

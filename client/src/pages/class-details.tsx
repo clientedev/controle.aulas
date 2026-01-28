@@ -39,7 +39,7 @@ import { api } from "@shared/routes";
 const createEvaluationSchema = z.object({
   unidadeCurricularId: z.string().min(1, "Selecione a unidade"),
   nome: z.string().min(2, "Nome obrigatório"),
-  notaMaxima: z.string().transform(val => parseFloat(val) || 10),
+  notaMaxima: z.string().transform(val => parseFloat(val) || 100),
   peso: z.string().transform(val => parseFloat(val) || 1),
 });
 
