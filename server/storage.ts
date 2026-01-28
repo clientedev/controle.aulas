@@ -351,6 +351,29 @@ export class DatabaseStorage implements IStorage {
 
   async criarAvaliacao(data: InsertAvaliacao): Promise<Avaliacao> {
     const [a] = await db.insert(avaliacoes).values(data).returning();
+    
+    // Criar notas para todos os alunos matriculados na turma
+    try {
+      // Buscar a UC para pegar a turma
+      const [uc] = await db.select().from(unidadesCurriculares).where(eq(unidadesCurriculares.id, data.unidadeCurricularId));
+      if (uc) {
+        // Buscar alunos da turma
+        const alunosTurma = await this.getAlunosDaTurma(uc.turmaId);
+        
+        // Criar notas com valor 0 para cada aluno
+        for (const aluno of alunosTurma) {
+          await db.insert(notas).values({
+            avaliacaoId: a.id,
+            alunoId: aluno.id,
+            valor: 0
+          }).onConflictDoNothing();
+        }
+        console.log(`Criadas ${alunosTurma.length} notas para a avaliacao ${a.id}`);
+      }
+    } catch (error) {
+      console.error("Erro ao criar notas automaticas:", error);
+    }
+    
     return a;
   }
 
