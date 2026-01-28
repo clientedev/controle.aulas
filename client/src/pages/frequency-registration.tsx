@@ -117,6 +117,11 @@ export default function FrequencyRegistration() {
               let studentImg: HTMLImageElement;
               if (photo.fotoBase64 && photo.fotoBase64.trim().length > 50) {
                 let cleanBase64 = photo.fotoBase64.trim();
+                // Validar se não é apenas um cabeçalho vazio "data:,"
+                if (cleanBase64 === "data:," || cleanBase64.length < 100) {
+                  console.warn("Foto base64 inválida ou muito curta para o aluno", photo.alunoId);
+                  return;
+                }
                 if (!cleanBase64.includes(',') && !cleanBase64.startsWith('data:')) {
                   cleanBase64 = `data:image/jpeg;base64,${cleanBase64}`;
                 }
@@ -205,87 +210,86 @@ export default function FrequencyRegistration() {
       stopVideo();
     }
 
-    try {
-      const input = await faceapi.fetchImage(base64Image);
-      // Usar SSD MobileNet v1 para detecção robusta
-      const detection = await faceapi.detectSingleFace(input, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
-        .withFaceLandmarks()
-        .withFaceDescriptor();
-
-      if (!detection) {
-        if (!auto) {
-          toast({
-            title: "Erro",
-            description: "Nenhuma face detectada. Tente se posicionar melhor.",
-            variant: "destructive",
-          });
-        }
-        return;
-      }
-
-      let bestMatch: { student: Aluno; distance: number } | null = null;
-      let minDistance = RECOGNITION_THRESHOLD;
-
-      for (const item of descriptors) {
-        const distance = faceapi.euclideanDistance(detection.descriptor, item.descriptor);
+      try {
+        const input = await faceapi.fetchImage(base64Image);
         
-        if (distance < minDistance) {
-          minDistance = distance;
-          const student = students.find(s => s.id === item.alunoId);
+        // Detecção ultra-rápida inicial para verificar se há rosto
+        const detection = await faceapi.detectSingleFace(input, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
+          .withFaceLandmarks()
+          .withFaceDescriptor();
+
+        if (!detection) {
+          if (!auto) {
+            toast({
+              title: "Erro",
+              description: "Nenhuma face detectada. Tente se posicionar melhor.",
+              variant: "destructive",
+            });
+          }
+          return;
+        }
+
+        // Criar FaceMatcher em tempo real para busca ultra-rápida (vetorizada)
+        // Isso é muito mais rápido que loop manual de euclideanDistance
+        const labeledDescriptors = descriptors.reduce((acc, item) => {
+          const existing = acc.find(l => l.label === item.alunoId.toString());
+          if (existing) {
+            existing.descriptors.push(item.descriptor);
+          } else {
+            acc.push(new faceapi.LabeledFaceDescriptors(item.alunoId.toString(), [item.descriptor]));
+          }
+          return acc;
+        }, [] as faceapi.LabeledFaceDescriptors[]);
+
+        if (labeledDescriptors.length === 0) return;
+
+        const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, RECOGNITION_THRESHOLD);
+        const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
+
+        if (bestMatch.label !== "unknown") { 
+          const matchedId = parseInt(bestMatch.label);
+          const student = students.find(s => s.id === matchedId);
+          
           if (student) {
-            bestMatch = { student, distance };
+            console.log("Totem: Aluno identificado!", student.nome, "Distância:", bestMatch.distance);
+            
+            // Calcular similaridade para exibição
+            const similarity = Math.round(100 - (bestMatch.distance * 50)); 
+            
+            // Registrar presença PRIMEIRO
+            const now = new Date();
+            const deviceTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const deviceDate = now.toISOString().split('T')[0];
+
+            registerPresenceMutation.mutate({
+              alunoId: student.id,
+              status: 1, 
+              horario: deviceTime,
+              data: deviceDate,
+              metodo: "facial"
+            });
+
+            // Atualizar UI e parar câmera
+            setCapturedImage(base64Image);
+            setRecognitionResult({ 
+              aluno: student, 
+              distance: bestMatch.distance,
+              similarity: similarity
+            });
+            setLastAutoCapture(Date.now());
+            setIsScanning(false);
+            setTotemActive(false);
+            
+            if (videoRef.current && videoRef.current.srcObject) {
+              const stream = videoRef.current.srcObject as MediaStream;
+              stream.getTracks().forEach(track => track.stop());
+              videoRef.current.srcObject = null;
+            }
           }
         }
+      } catch (err) {
+        console.error(err);
       }
-
-      if (bestMatch && minDistance < RECOGNITION_THRESHOLD) { 
-        console.log("Totem: Aluno identificado!", bestMatch.student.nome, "Distância:", minDistance);
-        
-        // Calcular similaridade para exibição (Escala linear baseada no threshold)
-        // 0.0 distance = 100%, RECOGNITION_THRESHOLD = 80%
-        // Fórmula: 100 - (distance * 100)
-        // Mas para o usuário ver "80%+", vamos normalizar:
-        const similarity = Math.round(100 - (minDistance * 50)); 
-        
-        // Registrar presença PRIMEIRO
-        const now = new Date();
-        const deviceTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const deviceDate = now.toISOString().split('T')[0];
-
-        registerPresenceMutation.mutate({
-          alunoId: bestMatch.student.id,
-          status: 1, 
-          horario: deviceTime,
-          data: deviceDate,
-          metodo: "facial"
-        });
-
-        // 1. Atualizar UI
-        setCapturedImage(base64Image);
-        setRecognitionResult({ 
-          aluno: bestMatch.student, 
-          distance: minDistance,
-          similarity: similarity
-        });
-        setLastAutoCapture(Date.now());
-        
-        // 2. PARAR TUDO (Câmera e Scanning)
-        setIsScanning(false);
-        setTotemActive(false);
-        
-        // 3. Forçar parada dos tracks do stream
-        if (videoRef.current && videoRef.current.srcObject) {
-          const stream = videoRef.current.srcObject as MediaStream;
-          stream.getTracks().forEach(track => {
-            console.log("Totem: Parando track", track.kind);
-            track.stop();
-          });
-          videoRef.current.srcObject = null;
-        }
-      }
-    } catch (err) {
-      console.error(err);
-    }
   };
 
   // Loop de detecção automática
