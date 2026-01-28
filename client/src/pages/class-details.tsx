@@ -1209,14 +1209,14 @@ function EvaluationsTab({ evaluations, unidades, classId, onStartGrading }: { ev
                   <TableCell className="text-center">{evalu.notaMaxima}</TableCell>
                   <TableCell className="text-center">{evalu.peso}</TableCell>
                   <TableCell className="text-right">
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      className="hover:bg-primary/10 text-primary"
-                      onClick={() => onStartGrading(evalu)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="hover:bg-primary/10 text-primary"
+                            onClick={() => onStartGrading(evalu)}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
                   </TableCell>
                 </TableRow>
               ))}
