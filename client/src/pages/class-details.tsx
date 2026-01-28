@@ -708,15 +708,27 @@ function UnidadesTab({ classId, unidades }: { classId: number, unidades: any[] }
           // Normalize row keys to ignore case and accents if possible
           const normalizedRow: any = {};
           Object.keys(row).forEach(key => {
-            const normalizedKey = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const normalizedKey = key.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
             normalizedRow[normalizedKey] = row[key];
           });
 
+          // Prioritize common variations of column names
+          const descricao = normalizedRow.descricao || normalizedRow.criterio || normalizedRow.nome || normalizedRow.item || normalizedRow.enunciado || "";
+          let pesoRaw = normalizedRow.peso || normalizedRow.valor || normalizedRow.pontos || "1.0";
+          
+          // Handle cases where peso might be a number or string with comma
+          let peso = 1.0;
+          if (typeof pesoRaw === 'number') {
+            peso = pesoRaw;
+          } else {
+            peso = parseFloat(String(pesoRaw).replace(',', '.')) || 1.0;
+          }
+
           return {
-            descricao: normalizedRow.descricao || normalizedRow.criterio || normalizedRow.nome || normalizedRow.item || "",
-            peso: parseFloat(String(normalizedRow.peso || normalizedRow.valor).replace(',', '.')) || 1.0
+            descricao: String(descricao).trim(),
+            peso: peso
           };
-        }).filter(c => c.descricao && String(c.descricao).trim() !== "");
+        }).filter(c => c.descricao && c.descricao !== "");
 
         if (criterios.length === 0) {
           toast({ title: "Erro", description: "Nenhum critério válido encontrado.", variant: "destructive" });
