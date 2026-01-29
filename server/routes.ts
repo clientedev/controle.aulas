@@ -112,19 +112,27 @@ export async function registerRoutes(
   app.get(api.turmas.obter.path, autenticar, async (req: any, res) => {
     try {
       const id = Number(req.params.id);
+      console.log(`Buscando turma ID: ${id} para usuario ${req.session.usuarioId}`);
       const turma = await storage.getTurma(id);
-      if (!turma) return res.status(404).json({ mensagem: "Turma não encontrada" });
+      
+      if (!turma) {
+        console.warn(`Turma ${id} não encontrada no banco.`);
+        return res.status(404).json({ mensagem: "Turma não encontrada" });
+      }
 
       // Verificar se o professor tem acesso à turma (ou se é admin)
       const usuario = await storage.getUsuario(req.session.usuarioId);
+      console.log(`Usuario perfil: ${usuario?.perfil}, Turma professorId: ${turma.professorId}`);
+      
       if (usuario?.perfil !== "admin" && turma.professorId !== req.session.usuarioId) {
+        console.warn(`Acesso negado para usuario ${req.session.usuarioId} na turma ${id}`);
         return res.status(403).json({ mensagem: "Acesso negado" });
       }
 
       res.json(turma);
     } catch (err) {
-      console.error("Erro ao obter turma:", err);
-      res.status(500).json({ mensagem: "Erro interno do servidor" });
+      console.error("Erro CRÍTICO ao obter turma:", err);
+      res.status(500).json({ mensagem: "Erro interno do servidor ao carregar turma" });
     }
   });
 
