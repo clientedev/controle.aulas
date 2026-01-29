@@ -319,7 +319,7 @@ function FinalGradesTab({ classId, students, unidades, evaluations: initialEvalu
     const uc = unidades.find(u => u.id === ev.unidadeCurricularId);
     return {
       ...ev,
-      ucNome: uc?.nome || "UC"
+      ucNome: uc?.nome || "Geral"
     };
   });
   
