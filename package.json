@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "NODE_ENV=development tsx server/index.ts",
-    "build": "tsx script/build.ts",
+    "build": "npm run db:push:force && tsx script/build.ts",
     "start": "node --max-old-space-size=450 dist/index.cjs",
     "railway:db-sync": "npx drizzle-kit push --force",
     "railway:update-db": "tsx server/update-db-railway.ts",
