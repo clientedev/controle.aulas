@@ -62,6 +62,11 @@ The application uses session-based authentication stored in the database. Login 
 - **@uppy/core** and **@uppy/react**: File upload management with dashboard modal
 - **@uppy/aws-s3**: S3-compatible upload for Replit Object Storage
 
+### Recent Changes (January 2026)
+
+#### Cache Invalidation Fix
+Fixed an issue where newly created evaluations weren't showing in the evaluations list or as columns in the final grades screen. The problem was a queryKey mismatch - the mutation was invalidating `["/api/turmas", classId]` but the query was using `[api.turmas.obter.path, classId]`. All invalidations now use the correct path pattern from the api routes definition.
+
 ### Photo Gallery Feature (January 2026)
 The student profile page includes a photo gallery for facial recognition purposes:
 - **Database table**: `fotos_alunos` stores photo references linked to students

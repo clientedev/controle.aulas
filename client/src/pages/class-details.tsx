@@ -68,7 +68,7 @@ export default function ClassDetails() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/turmas", classId] });
+      queryClient.invalidateQueries({ queryKey: [api.turmas.obter.path, classId] });
       setIsEditingClass(false);
       toast({ title: "Sucesso", description: "Turma atualizada com sucesso" });
     }
@@ -546,7 +546,7 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
     onSuccess: async (student) => {
       await enrollMutation.mutateAsync(student.id);
       queryClient.invalidateQueries({ queryKey: ["/api/alunos"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/turmas", classId] });
+      queryClient.invalidateQueries({ queryKey: [api.turmas.obter.path, classId] });
       setEnrollDialogOpen(false);
       form.reset();
     }
@@ -563,7 +563,7 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/turmas", classId] });
+      queryClient.invalidateQueries({ queryKey: [api.turmas.obter.path, classId] });
       setEditingStudent(null);
     }
   });
@@ -844,7 +844,7 @@ function StudentsTab({ classId, enrolledStudents }: { classId: number, enrolledS
                                 try {
                                   const res = await fetch(`/api/alunos/${student.id}`, { method: "DELETE" });
                                   if (!res.ok) throw new Error();
-                                  queryClient.invalidateQueries({ queryKey: ["/api/turmas", classId] });
+                                  queryClient.invalidateQueries({ queryKey: [api.turmas.obter.path, classId] });
                                   toast({ title: "Sucesso", description: "Aluno excluído com sucesso" });
                                 } catch (e) {
                                   toast({ title: "Erro", description: "Falha ao excluir aluno", variant: "destructive" });
@@ -993,7 +993,7 @@ function UnidadesTab({ classId, unidades }: { classId: number, unidades: any[] }
         const result = await res.json();
         toast({ title: "Sucesso", description: `${result.length} critérios importados.` });
         setImportDialogOpen(false);
-        queryClient.invalidateQueries({ queryKey: ["/api/turmas", classId] });
+        queryClient.invalidateQueries({ queryKey: [api.turmas.obter.path, classId] });
         queryClient.invalidateQueries({ queryKey: ["/api/unidades-curriculares", selectedUC.id, "criterios"] });
       } catch (err: any) {
         console.error("Excel import error:", err);
@@ -1269,7 +1269,7 @@ function EvaluationsTab({ evaluations, unidades, classId, onStartGrading }: { ev
       return res.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/turmas", classId] });
+      queryClient.invalidateQueries({ queryKey: [api.turmas.obter.path, classId] });
       // Invalida também a listagem de notas para garantir que a tabela de notas finais atualize
       queryClient.invalidateQueries({ queryKey: [api.notas.listarPorTurma.path, classId] });
       setDialogOpen(false);
