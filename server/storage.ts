@@ -382,23 +382,22 @@ export class DatabaseStorage implements IStorage {
 
   async getAvaliacoesDaTurma(turmaId: number): Promise<Avaliacao[]> {
     try {
-      return await db.select().from(avaliacoes).where(eq(avaliacoes.turmaId, turmaId));
+      // Prioridade: buscar pela nova coluna turmaId
+      const results = await db.select().from(avaliacoes).where(eq(avaliacoes.turmaId, turmaId));
+      
+      // Se não encontrar nada, mas a turma tem UCs, pode ser dados legados migrando
+      if (results.length === 0) {
+        const ucs = await this.getUnidadesCurricularesDaTurma(turmaId);
+        if (ucs.length > 0) {
+          const ucIds = ucs.map(u => u.id);
+          const legacyResults = await db.select().from(avaliacoes).where(sql`${avaliacoes.unidadeCurricularId} IN ${ucIds}`);
+          return legacyResults;
+        }
+      }
+      return results;
     } catch (error) {
       console.error(`Erro ao buscar avaliações da turma ${turmaId}:`, error);
-      // Se a coluna turmaId ainda não existir no banco (apesar do db:push),
-      // vamos tentar buscar pelas UCs como fallback para evitar o erro 500
-      try {
-        const ucs = await this.getUnidadesCurricularesDaTurma(turmaId);
-        const avs: Avaliacao[] = [];
-        for (const uc of ucs) {
-          const ucas = await db.select().from(avaliacoes).where(eq(avaliacoes.unidadeCurricularId, uc.id));
-          avs.push(...ucas);
-        }
-        return avs;
-      } catch (innerError) {
-        console.error("Erro no fallback de avaliações:", innerError);
-        return [];
-      }
+      return [];
     }
   }
 
