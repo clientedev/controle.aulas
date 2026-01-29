@@ -1292,7 +1292,11 @@ function EvaluationsTab({ evaluations, unidades, classId, onStartGrading }: { ev
   });
 
   const onSubmit = (data: any) => {
-    createMutation.mutate(data);
+    const payload = {
+      ...data,
+      unidadeCurricularId: data.unidadeCurricularId === "none" ? null : data.unidadeCurricularId
+    };
+    createMutation.mutate(payload);
   };
 
   return (
@@ -1310,9 +1314,12 @@ function EvaluationsTab({ evaluations, unidades, classId, onStartGrading }: { ev
             </Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Nova Avaliação</DialogTitle>
-            </DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Nova Avaliação</DialogTitle>
+            <DialogDescription>
+              Preencha os dados abaixo para criar uma nova avaliação para esta turma.
+            </DialogDescription>
+          </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
                 <FormField
@@ -1332,12 +1339,12 @@ function EvaluationsTab({ evaluations, unidades, classId, onStartGrading }: { ev
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Unidade Curricular (Opcional)</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value || "none"}>
                         <FormControl>
                           <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Nenhuma (Geral)</SelectItem>
+                          <SelectItem value="none">Nenhuma (Geral)</SelectItem>
                           {unidades.map(u => (
                             <SelectItem key={u.id} value={u.id.toString()}>{u.nome}</SelectItem>
                           ))}
