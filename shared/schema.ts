@@ -210,6 +210,42 @@ export const fotosAlunosRelations = relations(fotosAlunos, ({ one }) => ({
   }),
 }));
 
+// === MAPA DE SALA ===
+
+export const salas = pgTable("salas", {
+  id: serial("id").primaryKey(),
+  turmaId: integer("turma_id").references(() => turmas.id, { onDelete: "cascade" }).notNull().unique(),
+  nome: text("nome").notNull(),
+});
+
+export const computadores = pgTable("computadores", {
+  id: serial("id").primaryKey(),
+  salaId: integer("sala_id").references(() => salas.id, { onDelete: "cascade" }).notNull(),
+  numero: integer("numero").notNull(),
+  posX: integer("pos_x").notNull().default(100),
+  posY: integer("pos_y").notNull().default(100),
+  alunoId: integer("aluno_id").references(() => alunos.id, { onDelete: "set null" }),
+});
+
+export const salasRelations = relations(salas, ({ one, many }) => ({
+  turma: one(turmas, {
+    fields: [salas.turmaId],
+    references: [turmas.id],
+  }),
+  computadores: many(computadores),
+}));
+
+export const computadoresRelations = relations(computadores, ({ one }) => ({
+  sala: one(salas, {
+    fields: [computadores.salaId],
+    references: [salas.id],
+  }),
+  aluno: one(alunos, {
+    fields: [computadores.alunoId],
+    references: [alunos.id],
+  }),
+}));
+
 // === ESQUEMAS DE INSERÇÃO ===
 
 export const insertUsuarioSchema = createInsertSchema(usuarios).omit({ id: true, criadoEm: true });
@@ -225,6 +261,8 @@ export const insertFotoAlunoSchema = createInsertSchema(fotosAlunos).omit({ id: 
 export const insertCriterioAvaliacaoSchema = createInsertSchema(criteriosAvaliacao).omit({ id: true });
 export const insertCriterioAtendidoSchema = createInsertSchema(criteriosAtendidos).omit({ id: true });
 export const insertNotaCriterioSchema = createInsertSchema(notasCriterios).omit({ id: true });
+export const insertSalaSchema = createInsertSchema(salas).omit({ id: true });
+export const insertComputadorSchema = createInsertSchema(computadores).omit({ id: true });
 
 // === TIPOS DE CONTRATO DA API ===
 
@@ -253,6 +291,10 @@ export type CriterioAtendido = typeof criteriosAtendidos.$inferSelect;
 export type InsertCriterioAtendido = z.infer<typeof insertCriterioAtendidoSchema>;
 export type NotaCriterio = typeof notasCriterios.$inferSelect;
 export type InsertNotaCriterio = z.infer<typeof insertNotaCriterioSchema>;
+export type Sala = typeof salas.$inferSelect;
+export type InsertSala = z.infer<typeof insertSalaSchema>;
+export type Computador = typeof computadores.$inferSelect;
+export type InsertComputador = z.infer<typeof insertComputadorSchema>;
 
 export type CriarTurmaRequest = Omit<InsertTurma, "professorId">;
 export type AtualizarTurmaRequest = Partial<CriarTurmaRequest>;
