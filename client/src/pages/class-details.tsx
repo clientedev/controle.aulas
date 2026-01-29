@@ -336,20 +336,20 @@ function FinalGradesTab({ classId, students, unidades }: { classId: number, stud
         </div>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto relative border rounded-md">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="min-w-[200px] sticky left-0 bg-background z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Aluno</TableHead>
+                <TableHead className="min-w-[200px] sticky left-0 bg-background z-20 border-r">Aluno</TableHead>
                 {evaluations.map(ev => (
-                  <TableHead key={ev.id} className="text-center min-w-[120px]">
+                  <TableHead key={ev.id} className="text-center min-w-[120px] border-r">
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs text-muted-foreground font-normal">{ev.ucNome}</span>
-                      <span>{ev.nome}</span>
+                      <span className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">{ev.ucNome}</span>
+                      <span className="text-sm">{ev.nome}</span>
                     </div>
                   </TableHead>
                 ))}
-                <TableHead className="text-center font-bold min-w-[100px] sticky right-0 bg-background z-10 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">Média Final</TableHead>
+                <TableHead className="text-center font-bold min-w-[100px] sticky right-0 bg-background z-20 border-l">Média Final</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -370,16 +370,16 @@ function FinalGradesTab({ classId, students, unidades }: { classId: number, stud
 
                 return (
                   <TableRow key={student.id}>
-                    <TableCell className="font-medium sticky left-0 bg-background z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">{student.nome}</TableCell>
+                    <TableCell className="font-medium sticky left-0 bg-background z-10 border-r">{student.nome}</TableCell>
                     {evaluations.map(ev => {
                       const grade = gradesByEval[ev.id];
                       return (
-                        <TableCell key={ev.id} className="text-center">
+                        <TableCell key={ev.id} className="text-center border-r">
                           {grade !== undefined ? Number(grade).toFixed(1) : "-"}
                         </TableCell>
                       );
                     })}
-                    <TableCell className="text-center font-bold text-primary sticky right-0 bg-background z-10 shadow-[-2px_0_5_px_-2px_rgba(0,0,0,0.1)]">
+                    <TableCell className="text-center font-bold text-primary sticky right-0 bg-background z-10 border-l">
                       {finalAvg > 0 ? Number(finalAvg).toFixed(1) : "-"}
                     </TableCell>
                   </TableRow>
