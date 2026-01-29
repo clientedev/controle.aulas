@@ -20,6 +20,8 @@ import session from "express-session";
 import connectPg from "connect-pg-simple";
 
 const PostgresStore = connectPg(session);
+// We omit explicit 'pg' import and let connect-pg-simple use its internal dependency
+// which avoids esbuild issues with pg-native if configured correctly.
 export const sessionStore = new PostgresStore({
   conString: process.env.DATABASE_URL,
   createTableIfMissing: true
