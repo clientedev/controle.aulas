@@ -17,11 +17,13 @@ import {
   ocorrenciasAluno
 } from "@shared/schema";
 import session from "express-session";
-import MemoryStore from "memorystore";
+import connectPg from "connect-pg-simple";
+import pg from "pg";
 
-const SessionStore = MemoryStore(session);
-export const sessionStore = new SessionStore({
-  checkPeriod: 86400000 // prune expired entries every 24h
+const PostgresStore = connectPg(session);
+export const sessionStore = new PostgresStore({
+  conString: process.env.DATABASE_URL,
+  createTableIfMissing: true
 });
 
 export interface IStorage {
@@ -145,20 +147,43 @@ export class DatabaseStorage implements IStorage {
 
   async getTurma(id: number): Promise<any | undefined> {
     try {
+      console.log(`Storage: Buscando turma ID: ${id}`);
       const [t] = await db.select().from(turmas).where(eq(turmas.id, id));
-      if (!t) return undefined;
+      if (!t) {
+        console.warn(`Storage: Turma ${id} não encontrada no banco.`);
+        return undefined;
+      }
 
-      const [professor] = await db.select().from(usuarios).where(eq(usuarios.id, t.professorId));
-      const alunosTurma = await this.getAlunosDaTurma(id);
-      const ucs = await this.getUnidadesCurricularesDaTurma(id);
+      // Buscar dependências com tratamento de erro individual para evitar falha total
+      const professor = await db.select().from(usuarios).where(eq(usuarios.id, t.professorId))
+        .then(res => res[0])
+        .catch(err => {
+          console.error(`Erro ao buscar professor da turma ${id}:`, err);
+          return { nome: "Professor não encontrado" };
+        });
+
+      const alunosTurma = await this.getAlunosDaTurma(id).catch(err => {
+        console.error(`Erro ao buscar alunos da turma ${id}:`, err);
+        return [];
+      });
+
+      const ucs = await this.getUnidadesCurricularesDaTurma(id).catch(err => {
+        console.error(`Erro ao buscar UCs da turma ${id}:`, err);
+        return [];
+      });
       
-      // Buscar avaliações diretamente da turma
-      const avs = await this.getAvaliacoesDaTurma(id);
+      const avs = await this.getAvaliacoesDaTurma(id).catch(err => {
+        console.error(`Erro ao buscar avaliações da turma ${id}:`, err);
+        return [];
+      });
 
-      const contagem = await db
-        .select({ count: matriculas.id })
+      const contagemResult = await db
+        .select({ count: sql<number>`count(*)` })
         .from(matriculas)
-        .where(eq(matriculas.turmaId, id));
+        .where(eq(matriculas.turmaId, id))
+        .catch(() => [{ count: 0 }]);
+
+      const totalAlunos = Number(contagemResult[0]?.count || 0);
 
       return { 
         ...t, 
@@ -166,10 +191,10 @@ export class DatabaseStorage implements IStorage {
         alunos: alunosTurma,
         unidadesCurriculares: ucs,
         avaliacoes: avs,
-        contagemAlunos: contagem.length 
+        contagemAlunos: totalAlunos
       };
     } catch (error) {
-      console.error(`Erro ao buscar turma ${id}:`, error);
+      console.error(`Erro crítico ao buscar turma ${id}:`, error);
       throw error;
     }
   }
