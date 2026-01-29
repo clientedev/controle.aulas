@@ -34,6 +34,15 @@ export const alunos = pgTable("alunos", {
   nome: text("nome").notNull(),
   matricula: text("matricula").unique().notNull(),
   email: text("email"),
+  fotoPerfilId: integer("foto_perfil_id"), // Referência à foto padrão (id de fotos_alunos)
+});
+
+export const ocorrenciasAluno = pgTable("ocorrencias_aluno", {
+  id: serial("id").primaryKey(),
+  alunoId: integer("aluno_id").references(() => alunos.id, { onDelete: "cascade" }).notNull(),
+  professorId: integer("professor_id").references(() => usuarios.id, { onDelete: "cascade" }).notNull(),
+  descricao: text("descricao").notNull(),
+  data: timestamp("data").defaultNow().notNull(),
 });
 
 export const matriculas = pgTable("matriculas", {
@@ -266,6 +275,10 @@ export const ocorrenciasComputadorRelations = relations(ocorrenciasComputador, (
 export const insertOcorrenciaComputadorSchema = createInsertSchema(ocorrenciasComputador).omit({ id: true, criadoEm: true });
 export type OcorrenciaComputador = typeof ocorrenciasComputador.$inferSelect;
 export type InsertOcorrenciaComputador = z.infer<typeof insertOcorrenciaComputadorSchema>;
+
+export const insertOcorrenciaAlunoSchema = createInsertSchema(ocorrenciasAluno).omit({ id: true, data: true });
+export type OcorrenciaAluno = typeof ocorrenciasAluno.$inferSelect;
+export type InsertOcorrenciaAluno = z.infer<typeof insertOcorrenciaAlunoSchema>;
 
 // === ESQUEMAS DE INSERÇÃO ===
 

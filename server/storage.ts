@@ -12,7 +12,9 @@ import {
   type CriterioAtendido, type InsertCriterioAtendido,
   type NotaCriterio, type InsertNotaCriterio,
   type Sala, type InsertSala, type Computador, type InsertComputador,
-  type OcorrenciaComputador, type InsertOcorrenciaComputador
+  type OcorrenciaComputador, type InsertOcorrenciaComputador,
+  type OcorrenciaAluno, type InsertOcorrenciaAluno,
+  ocorrenciasAluno
 } from "@shared/schema";
 import session from "express-session";
 import MemoryStore from "memorystore";
@@ -97,6 +99,10 @@ export interface IStorage {
   criarComputador(data: InsertComputador): Promise<Computador>;
   atualizarComputador(id: number, data: Partial<InsertComputador>): Promise<Computador>;
   excluirComputador(id: number): Promise<void>;
+
+  // Ocorrências de Alunos
+  getOcorrenciasDoAluno(alunoId: number): Promise<OcorrenciaAluno[]>;
+  criarOcorrenciaAluno(data: InsertOcorrenciaAluno): Promise<OcorrenciaAluno>;
 
   // Ocorrências
   getOcorrenciasDoComputador(computadorId: number): Promise<OcorrenciaComputador[]>;
@@ -697,6 +703,15 @@ export class DatabaseStorage implements IStorage {
       });
     }
     return comps;
+  }
+
+  async getOcorrenciasDoAluno(alunoId: number): Promise<OcorrenciaAluno[]> {
+    return await db.select().from(ocorrenciasAluno).where(eq(ocorrenciasAluno.alunoId, alunoId)).orderBy(sql`${ocorrenciasAluno.data} DESC`);
+  }
+
+  async criarOcorrenciaAluno(data: InsertOcorrenciaAluno): Promise<OcorrenciaAluno> {
+    const [o] = await db.insert(ocorrenciasAluno).values(data).returning();
+    return o;
   }
 
   async getOcorrenciasDoComputador(computadorId: number): Promise<OcorrenciaComputador[]> {

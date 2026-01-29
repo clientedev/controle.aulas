@@ -633,6 +633,24 @@ export async function registerRoutes(
     res.json(comp);
   });
 
+  app.get("/api/alunos/:id/ocorrencias", autenticar, async (req, res) => {
+    const id = Number(req.params.id);
+    const lista = await storage.getOcorrenciasDoAluno(id);
+    res.json(lista);
+  });
+
+  app.post("/api/alunos/:id/ocorrencias", autenticar, async (req: any, res) => {
+    const id = Number(req.params.id);
+    const { descricao } = req.body;
+    if (!descricao) return res.status(400).json({ mensagem: "Descrição é obrigatória" });
+    const o = await storage.criarOcorrenciaAluno({ 
+      alunoId: id, 
+      descricao, 
+      professorId: req.session.usuarioId 
+    });
+    res.status(201).json(o);
+  });
+
   app.get("/api/computadores/:id/ocorrencias", autenticar, async (req, res) => {
     const id = Number(req.params.id);
     const lista = await storage.getOcorrenciasDoComputador(id);
