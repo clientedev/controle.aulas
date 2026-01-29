@@ -18,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 const occurrenceSchema = z.object({
   descricao: z.string().min(5, "A descrição deve ter pelo menos 5 caracteres"),
 });
-import type { Aluno, Turma, Nota, Avaliacao, UnidadeCurricular, Frequencia } from "@shared/schema";
+import type { Aluno, Turma, Nota, Avaliacao, UnidadeCurricular, Frequencia, OcorrenciaAluno } from "@shared/schema";
 import { LayoutShell } from "@/components/layout-shell";
 import { PhotoGallery } from "@/components/photo-gallery";
 import { jsPDF } from "jspdf";
@@ -129,6 +129,7 @@ export default function StudentProfile() {
       return res.json();
     }
   });
+  const { data: aluno, isLoading } = useQuery<AlunoComDetalhes>({
     queryKey: ["/api/alunos", id],
     queryFn: async () => {
       const res = await fetch(`/api/alunos/${id}`);
@@ -660,10 +661,6 @@ export default function StudentProfile() {
             </Card>
           </div>
         </div>
-      </div>
-    </LayoutShell>
-  );
-}
       </div>
     </LayoutShell>
   );
