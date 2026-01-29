@@ -3,7 +3,7 @@ import { eq, and, sql } from "drizzle-orm";
 import { format } from "date-fns";
 import {
   usuarios, turmas, alunos, matriculas, avaliacoes, notas, horarios, frequencia, unidadesCurriculares, fotosAlunos,
-  criteriosAvaliacao, criteriosAtendidos, notasCriterios, salas, computadores,
+  criteriosAvaliacao, criteriosAtendidos, notasCriterios, salas, computadores, ocorrenciasComputador,
   type Usuario, type InsertUsuario, type Turma, type InsertTurma,
   type Aluno, type InsertAluno, type Avaliacao, type InsertAvaliacao,
   type Nota, type InsertNota, type TurmaComDetalhes, type UnidadeCurricular, type InsertUnidadeCurricular,
@@ -11,7 +11,8 @@ import {
   type FotoAluno, type InsertFotoAluno, type CriterioAvaliacao, type InsertCriterioAvaliacao,
   type CriterioAtendido, type InsertCriterioAtendido,
   type NotaCriterio, type InsertNotaCriterio,
-  type Sala, type InsertSala, type Computador, type InsertComputador
+  type Sala, type InsertSala, type Computador, type InsertComputador,
+  type OcorrenciaComputador, type InsertOcorrenciaComputador
 } from "@shared/schema";
 import session from "express-session";
 import MemoryStore from "memorystore";
@@ -92,10 +93,15 @@ export interface IStorage {
   criarSala(data: InsertSala): Promise<Sala>;
   atualizarSala(id: number, data: Partial<InsertSala>): Promise<Sala>;
   excluirSala(id: number): Promise<void>;
-  getComputadoresDaSala(salaId: number): Promise<(Computador & { aluno?: Aluno })[]>;
+  getComputadoresDaSala(salaId: number): Promise<(Computador & { aluno?: Aluno; ocorrencias?: OcorrenciaComputador[] })[]>;
   criarComputador(data: InsertComputador): Promise<Computador>;
   atualizarComputador(id: number, data: Partial<InsertComputador>): Promise<Computador>;
   excluirComputador(id: number): Promise<void>;
+
+  // Ocorrências
+  getOcorrenciasDoComputador(computadorId: number): Promise<OcorrenciaComputador[]>;
+  criarOcorrenciaComputador(data: InsertOcorrenciaComputador): Promise<OcorrenciaComputador>;
+  resolverOcorrencia(id: number, resolvido: number): Promise<OcorrenciaComputador>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -674,17 +680,37 @@ export class DatabaseStorage implements IStorage {
     await db.delete(salas).where(eq(salas.id, id));
   }
 
-  async getComputadoresDaSala(salaId: number): Promise<(Computador & { aluno?: Aluno })[]> {
+  async getComputadoresDaSala(salaId: number): Promise<any[]> {
     const result = await db
       .select()
       .from(computadores)
       .leftJoin(alunos, eq(computadores.alunoId, alunos.id))
       .where(eq(computadores.salaId, salaId));
 
-    return result.map(r => ({
-      ...r.computadores,
-      aluno: r.alunos || undefined
-    }));
+    const comps = [];
+    for (const r of result) {
+      const ocorrencias = await db.select().from(ocorrenciasComputador).where(eq(ocorrenciasComputador.computadorId, r.computadores.id));
+      comps.push({
+        ...r.computadores,
+        aluno: r.alunos || undefined,
+        ocorrencias
+      });
+    }
+    return comps;
+  }
+
+  async getOcorrenciasDoComputador(computadorId: number): Promise<OcorrenciaComputador[]> {
+    return await db.select().from(ocorrenciasComputador).where(eq(ocorrenciasComputador.computadorId, computadorId));
+  }
+
+  async criarOcorrenciaComputador(data: InsertOcorrenciaComputador): Promise<OcorrenciaComputador> {
+    const [o] = await db.insert(ocorrenciasComputador).values(data).returning();
+    return o;
+  }
+
+  async resolverOcorrencia(id: number, resolvido: number): Promise<OcorrenciaComputador> {
+    const [o] = await db.update(ocorrenciasComputador).set({ resolvido }).where(eq(ocorrenciasComputador.id, id)).returning();
+    return o;
   }
 
   async criarComputador(data: InsertComputador): Promise<Computador> {

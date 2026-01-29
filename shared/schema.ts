@@ -216,6 +216,7 @@ export const salas = pgTable("salas", {
   id: serial("id").primaryKey(),
   turmaId: integer("turma_id").references(() => turmas.id, { onDelete: "cascade" }).notNull().unique(),
   nome: text("nome").notNull(),
+  anotacoes: text("anotacoes"),
 });
 
 export const computadores = pgTable("computadores", {
@@ -227,6 +228,14 @@ export const computadores = pgTable("computadores", {
   alunoId: integer("aluno_id").references(() => alunos.id, { onDelete: "set null" }),
 });
 
+export const ocorrenciasComputador = pgTable("ocorrencias_computador", {
+  id: serial("id").primaryKey(),
+  computadorId: integer("computador_id").references(() => computadores.id, { onDelete: "cascade" }).notNull(),
+  descricao: text("descricao").notNull(),
+  resolvido: integer("resolvido").notNull().default(0),
+  criadoEm: timestamp("criado_em").defaultNow(),
+});
+
 export const salasRelations = relations(salas, ({ one, many }) => ({
   turma: one(turmas, {
     fields: [salas.turmaId],
@@ -235,7 +244,7 @@ export const salasRelations = relations(salas, ({ one, many }) => ({
   computadores: many(computadores),
 }));
 
-export const computadoresRelations = relations(computadores, ({ one }) => ({
+export const computadoresRelations = relations(computadores, ({ one, many }) => ({
   sala: one(salas, {
     fields: [computadores.salaId],
     references: [salas.id],
@@ -244,7 +253,19 @@ export const computadoresRelations = relations(computadores, ({ one }) => ({
     fields: [computadores.alunoId],
     references: [alunos.id],
   }),
+  ocorrencias: many(ocorrenciasComputador),
 }));
+
+export const ocorrenciasComputadorRelations = relations(ocorrenciasComputador, ({ one }) => ({
+  computador: one(computadores, {
+    fields: [ocorrenciasComputador.computadorId],
+    references: [computadores.id],
+  }),
+}));
+
+export const insertOcorrenciaComputadorSchema = createInsertSchema(ocorrenciasComputador).omit({ id: true, criadoEm: true });
+export type OcorrenciaComputador = typeof ocorrenciasComputador.$inferSelect;
+export type InsertOcorrenciaComputador = z.infer<typeof insertOcorrenciaComputadorSchema>;
 
 // === ESQUEMAS DE INSERÇÃO ===
 

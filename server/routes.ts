@@ -622,7 +622,7 @@ export async function registerRoutes(
     res.status(201).json(comp);
   });
 
-  app.patch("/api/computadores/:id", autenticar, async (req, res) => {
+  app.patch("/api/computadores/:id", autenticar, async (req: any, res) => {
     const id = Number(req.params.id);
     const { posX, posY, alunoId } = req.body;
     const updates: any = {};
@@ -631,6 +631,34 @@ export async function registerRoutes(
     if (alunoId !== undefined) updates.alunoId = alunoId === null ? null : Number(alunoId);
     const comp = await storage.atualizarComputador(id, updates);
     res.json(comp);
+  });
+
+  app.get("/api/computadores/:id/ocorrencias", autenticar, async (req, res) => {
+    const id = Number(req.params.id);
+    const lista = await storage.getOcorrenciasDoComputador(id);
+    res.json(lista);
+  });
+
+  app.post("/api/computadores/:id/ocorrencias", autenticar, async (req, res) => {
+    const id = Number(req.params.id);
+    const { descricao } = req.body;
+    if (!descricao) return res.status(400).json({ mensagem: "Descrição é obrigatória" });
+    const o = await storage.criarOcorrenciaComputador({ computadorId: id, descricao, resolvido: 0 });
+    res.status(201).json(o);
+  });
+
+  app.patch("/api/ocorrencias/:id", autenticar, async (req, res) => {
+    const id = Number(req.params.id);
+    const { resolvido } = req.body;
+    const o = await storage.resolverOcorrencia(id, Number(resolvido));
+    res.json(o);
+  });
+
+  app.patch("/api/salas/:id/anotacoes", autenticar, async (req, res) => {
+    const id = Number(req.params.id);
+    const { anotacoes } = req.body;
+    const sala = await storage.atualizarSala(id, { anotacoes });
+    res.json(sala);
   });
 
   app.delete("/api/computadores/:id", autenticar, async (req, res) => {
