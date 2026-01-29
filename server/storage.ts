@@ -18,7 +18,6 @@ import {
 } from "@shared/schema";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import pg from "pg";
 
 const PostgresStore = connectPg(session);
 export const sessionStore = new PostgresStore({
