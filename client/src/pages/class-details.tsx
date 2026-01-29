@@ -311,10 +311,75 @@ function GradingView({ evaluation, students, onBack }: { evaluation: any, studen
   );
 }
 
+function EditableGradeCell({ studentId, evaluationId, currentValue, maxValue, classId }: { studentId: number, evaluationId: number, currentValue: number | undefined, maxValue: number, classId: number }) {
+  const [value, setValue] = useState(currentValue?.toString() ?? "");
+  const [isEditing, setIsEditing] = useState(false);
+  const updateGradeMutation = useUpdateGrade(classId);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    setValue(currentValue?.toString() ?? "");
+  }, [currentValue]);
+
+  const handleSave = async () => {
+    const numValue = parseFloat(value);
+    if (isNaN(numValue)) {
+      setValue(currentValue?.toString() ?? "");
+      setIsEditing(false);
+      return;
+    }
+    
+    if (numValue !== currentValue) {
+      try {
+        await updateGradeMutation.mutateAsync({
+          alunoId: studentId,
+          avaliacaoId: evaluationId,
+          valor: numValue
+        });
+      } catch (error) {
+        toast({ title: "Erro", description: "Falha ao salvar nota", variant: "destructive" });
+        setValue(currentValue?.toString() ?? "");
+      }
+    }
+    setIsEditing(false);
+  };
+
+  if (isEditing) {
+    return (
+      <Input
+        type="number"
+        className="w-16 h-7 text-center p-1"
+        value={value}
+        max={maxValue}
+        min={0}
+        autoFocus
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={handleSave}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") handleSave();
+          if (e.key === "Escape") {
+            setValue(currentValue?.toString() ?? "");
+            setIsEditing(false);
+          }
+        }}
+      />
+    );
+  }
+
+  return (
+    <span 
+      className="cursor-pointer hover:bg-muted px-2 py-1 rounded transition-colors"
+      onClick={() => setIsEditing(true)}
+      title="Clique para editar"
+    >
+      {currentValue !== undefined ? Number(currentValue).toFixed(1) : "-"}
+    </span>
+  );
+}
+
 function FinalGradesTab({ classId, students, unidades, evaluations: initialEvaluations }: { classId: number, students: any[], unidades: any[], evaluations: any[] }) {
   const { data: grades } = useClassGrades(classId);
   
-  // Garantir que as avaliações tenham o nome da UC
   const evaluations = initialEvaluations.map(ev => {
     const uc = unidades.find(u => u.id === ev.unidadeCurricularId);
     return {
@@ -380,12 +445,18 @@ function FinalGradesTab({ classId, students, unidades, evaluations: initialEvalu
                   <TableRow key={student.id}>
                     <TableCell className="font-medium sticky left-0 bg-background z-10 border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">{student.nome}</TableCell>
                     
-                    {/* Notas das Avaliações */}
+                    {/* Notas das Avaliações - Editáveis */}
                     {evaluations.map(ev => {
                       const grade = gradesByEval[ev.id];
                       return (
                         <TableCell key={`grade-${student.id}-${ev.id}`} className="text-center border-r">
-                          {grade !== undefined ? Number(grade).toFixed(1) : "-"}
+                          <EditableGradeCell
+                            studentId={student.id}
+                            evaluationId={ev.id}
+                            currentValue={grade}
+                            maxValue={ev.notaMaxima}
+                            classId={classId}
+                          />
                         </TableCell>
                       );
                     })}
@@ -1258,6 +1329,22 @@ function GradesTab({ classId, students }: { classId: number, students: any[] }) 
 function EvaluationsTab({ evaluations, unidades, classId, onStartGrading }: { evaluations: any[], unidades: any[], classId: number, onStartGrading: (ev: any) => void }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/avaliacoes/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Erro ao excluir avaliação");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.turmas.obter.path, classId] });
+      queryClient.invalidateQueries({ queryKey: [api.notas.listarPorTurma.path, classId] });
+      toast({ title: "Sucesso", description: "Avaliação excluída com sucesso" });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Falha ao excluir avaliação", variant: "destructive" });
+    }
+  });
+
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       const res = await fetch(`/api/turmas/${classId}/avaliacoes`, {
@@ -1415,15 +1502,46 @@ function EvaluationsTab({ evaluations, unidades, classId, onStartGrading }: { ev
                     <TableCell className="text-center">{evalu.notaMaxima}</TableCell>
                     <TableCell className="text-center">{evalu.peso}</TableCell>
                     <TableCell className="text-right">
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        className="hover:bg-primary/10 text-primary"
-                        onClick={() => onStartGrading(evalu)}
-                        data-testid={`button-grade-evaluation-${evalu.id}`}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="hover:bg-primary/10 text-primary"
+                          onClick={() => onStartGrading(evalu)}
+                          data-testid={`button-grade-evaluation-${evalu.id}`}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              size="icon" 
+                              variant="ghost" 
+                              className="hover:bg-destructive/10 text-destructive"
+                              data-testid={`button-delete-evaluation-${evalu.id}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Excluir Avaliação</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tem certeza que deseja excluir a avaliação "{evalu.nome}"? Todas as notas associadas também serão excluídas. Esta ação não pode ser desfeita.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction 
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                onClick={() => deleteMutation.mutate(evalu.id)}
+                              >
+                                Excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );

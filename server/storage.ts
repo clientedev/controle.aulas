@@ -55,6 +55,7 @@ export interface IStorage {
   // Avaliações
   getAvaliacoesDaTurma(turmaId: number): Promise<Avaliacao[]>;
   criarAvaliacao(data: InsertAvaliacao): Promise<Avaliacao>;
+  excluirAvaliacao(id: number): Promise<void>;
 
   // Notas
   atualizarNota(data: InsertNota): Promise<Nota>;
@@ -379,6 +380,11 @@ export class DatabaseStorage implements IStorage {
     }
     
     return a;
+  }
+
+  async excluirAvaliacao(id: number): Promise<void> {
+    await db.delete(notas).where(eq(notas.avaliacaoId, id));
+    await db.delete(avaliacoes).where(eq(avaliacoes.id, id));
   }
 
   async atualizarNota(data: InsertNota): Promise<Nota> {

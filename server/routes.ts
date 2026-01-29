@@ -300,6 +300,17 @@ export async function registerRoutes(
     res.json(avaliacoes);
   });
 
+  app.delete("/api/avaliacoes/:id", autenticar, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      await storage.excluirAvaliacao(id);
+      res.status(204).end();
+    } catch (err: any) {
+      console.error("Erro ao excluir avaliação:", err);
+      res.status(400).json({ mensagem: "Erro ao excluir avaliação", detalhes: err.message });
+    }
+  });
+
   app.post("/api/unidades-curriculares/:id/avaliacoes", autenticar, async (req: any, res) => {
     const unidadeCurricularId = Number(req.params.id);
     try {
