@@ -78,6 +78,22 @@ The student profile page includes a photo gallery for facial recognition purpose
   - `DELETE /api/fotos/:id` - Remove photo
   - `GET /api/uploads/url?objectPath=...` - Serve stored files
 
+### Classroom Map Feature (January 2026)
+The class details page includes a "Mapa de Sala" tab for visual classroom layout management:
+- **Database tables**: `salas` (rooms linked to classes) and `computadores` (computer positions with student assignments)
+- **Drag-and-drop**: Computers can be positioned freely on a canvas
+- **Student assignment**: Each computer can be assigned to a student from the class
+- **Attendance-based coloring**: 
+  - Gray: No student assigned
+  - Red: Student assigned but absent today
+  - Green: Student assigned and present today
+- **API Endpoints**:
+  - `GET /api/turmas/:id/sala` - Get room with computers
+  - `POST /api/turmas/:id/sala` - Create room
+  - `POST /api/salas/:id/computadores` - Add computer
+  - `PATCH /api/computadores/:id` - Update computer position/assignment
+  - `DELETE /api/computadores/:id` - Remove computer
+
 ### Environment Variables Required
 - `DATABASE_URL` - PostgreSQL connection string
 - `SESSION_SECRET` - Secret key for session encryption
