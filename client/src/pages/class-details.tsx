@@ -1779,9 +1779,10 @@ function MapaSalaTab({ classId, students }: { classId: number; students: any[] }
 
   const getStatusColor = (comp: ComputadorData): string => {
     if (!comp.alunoId) return "bg-gray-400";
-    if (!frequenciaHoje) return "bg-gray-400";
-    const presente = frequenciaHoje.find((f: any) => f.alunoId === comp.alunoId && f.presente === 1);
-    return presente ? "bg-green-500" : "bg-red-500";
+    if (!frequenciaHoje || frequenciaHoje.length === 0) return "bg-red-500";
+    const statusAluno = frequenciaHoje.find((f: any) => f.alunoId === comp.alunoId);
+    if (!statusAluno) return "bg-red-500";
+    return statusAluno.status === 1 ? "bg-green-500" : "bg-red-500";
   };
 
   const handleMouseDown = (e: React.MouseEvent, comp: ComputadorData) => {
