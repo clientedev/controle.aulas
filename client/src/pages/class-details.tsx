@@ -14,6 +14,7 @@ import { useStudents, useEnrollStudent, useCreateManyStudents } from "@/hooks/us
 import { useClassGrades, useUpdateGrade } from "@/hooks/use-grades";
 import { useUnidadesCurriculares, useCreateUnidadeCurricular } from "@/hooks/use-unidades-curriculares";
 import { LayoutShell } from "@/components/layout-shell";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
