@@ -327,8 +327,8 @@ function FinalGradesTab({ classId, students, unidades, evaluations: initialEvalu
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div className="space-y-1">
-          <CardTitle>Média Final por Avaliação</CardTitle>
-          <CardDescription>Notas individuais por avaliação e média final</CardDescription>
+          <CardTitle>Média Final e Aproveitamento</CardTitle>
+          <CardDescription>Notas por avaliação, aproveitamento por UC e média final</CardDescription>
         </div>
       </CardHeader>
       <CardContent>
@@ -337,14 +337,27 @@ function FinalGradesTab({ classId, students, unidades, evaluations: initialEvalu
             <TableHeader>
               <TableRow>
                 <TableHead className="min-w-[200px] sticky left-0 bg-background z-20 border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Aluno</TableHead>
+                
+                {/* Colunas de Avaliações */}
                 {evaluations.map(ev => (
-                  <TableHead key={ev.id} className="text-center min-w-[120px] border-r">
+                  <TableHead key={`ev-${ev.id}`} className="text-center min-w-[120px] border-r bg-muted/30">
                     <div className="flex flex-col gap-1">
                       <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">{ev.ucNome}</span>
                       <span className="text-sm font-bold">{ev.nome}</span>
                     </div>
                   </TableHead>
                 ))}
+
+                {/* Colunas de Aproveitamento por UC */}
+                {unidades.map(uc => (
+                  <TableHead key={`uc-${uc.id}`} className="text-center min-w-[120px] border-r bg-primary/5">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] text-primary font-semibold uppercase tracking-wider">Aproveitamento</span>
+                      <span className="text-sm font-bold">{uc.nome}</span>
+                    </div>
+                  </TableHead>
+                ))}
+
                 <TableHead className="text-center font-bold min-w-[100px] sticky right-0 bg-background z-20 border-l shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">Média Final</TableHead>
               </TableRow>
             </TableHeader>
@@ -352,31 +365,44 @@ function FinalGradesTab({ classId, students, unidades, evaluations: initialEvalu
               {students.map(student => {
                 const studentGrades = grades?.filter((g: any) => g.alunoId === student.id) || [];
                 
-                // Agrupar por avaliação para garantir que pegamos a última nota de cada
                 const gradesByEval: Record<number, number> = {};
                 studentGrades.forEach((g: any) => {
                   gradesByEval[g.avaliacaoId] = g.valor;
                 });
 
-                // Calcular média final (considerando todas as notas de avaliações existentes)
+                // Calcular média das avaliações
                 const evalValues = Object.values(gradesByEval);
-                const finalAvg = evalValues.length > 0
+                const evalsAvg = evalValues.length > 0
                   ? (evalValues.reduce((acc, val) => acc + val, 0) / evalValues.length)
                   : 0;
 
                 return (
                   <TableRow key={student.id}>
                     <TableCell className="font-medium sticky left-0 bg-background z-10 border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">{student.nome}</TableCell>
+                    
+                    {/* Notas das Avaliações */}
                     {evaluations.map(ev => {
                       const grade = gradesByEval[ev.id];
                       return (
-                        <TableCell key={ev.id} className="text-center border-r">
+                        <TableCell key={`grade-${student.id}-${ev.id}`} className="text-center border-r">
                           {grade !== undefined ? Number(grade).toFixed(1) : "-"}
                         </TableCell>
                       );
                     })}
+
+                    {/* Aproveitamento das UCs */}
+                    {unidades.map(uc => (
+                      <TableCell key={`apr-${student.id}-${uc.id}`} className="text-center border-r">
+                        <StudentAproveitamentoValue ucId={uc.id} alunoId={student.id} />
+                      </TableCell>
+                    ))}
+
                     <TableCell className="text-center font-bold text-primary sticky right-0 bg-background z-10 border-l shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                      {finalAvg > 0 ? Number(finalAvg).toFixed(1) : "-"}
+                      <FinalAverageValue 
+                        alunoId={student.id} 
+                        evalsAvg={evalsAvg} 
+                        unidades={unidades} 
+                      />
                     </TableCell>
                   </TableRow>
                 );
@@ -387,6 +413,58 @@ function FinalGradesTab({ classId, students, unidades, evaluations: initialEvalu
       </CardContent>
     </Card>
   );
+}
+
+function StudentAproveitamentoValue({ ucId, alunoId }: { ucId: number, alunoId: number }) {
+  const { data: aproveitamento } = useQuery<any>({
+    queryKey: ["/api/unidades-curriculares", ucId, "alunos", alunoId, "aproveitamento"],
+    queryFn: async () => {
+      const res = await fetch(`/api/unidades-curriculares/${ucId}/alunos/${alunoId}/aproveitamento`);
+      if (res.status === 404 || !res.ok) return null;
+      return res.json();
+    }
+  });
+
+  if (!aproveitamento) return <span className="text-muted-foreground">-</span>;
+  const perc = Math.round(aproveitamento.aproveitamento * 100);
+  return <span className={perc < 50 ? "text-destructive font-medium" : "font-medium"}>{perc}%</span>;
+}
+
+function FinalAverageValue({ alunoId, evalsAvg, unidades }: { alunoId: number, evalsAvg: number, unidades: any[] }) {
+  // Buscar aproveitamentos de todas as UCs do aluno
+  const aproveitamentos = useQuery({
+    queryKey: ["final-average", alunoId],
+    queryFn: async () => {
+      const results = await Promise.all(
+        unidades.map(async (uc) => {
+          const res = await fetch(`/api/unidades-curriculares/${uc.id}/alunos/${alunoId}/aproveitamento`);
+          if (res.status === 404 || !res.ok) return 0;
+          const data = await res.json();
+          return data.aproveitamento * 100;
+        })
+      );
+      return results;
+    }
+  });
+
+  if (aproveitamentos.isLoading) return <span className="animate-pulse">...</span>;
+
+  const aprValues = aproveitamentos.data || [];
+  const aprAvg = aprValues.length > 0 
+    ? aprValues.reduce((a, b) => a + b, 0) / aprValues.length 
+    : 0;
+
+  // Média final é a média entre a média das avaliações e a média dos aproveitamentos das UCs
+  let finalGrade = 0;
+  if (evalsAvg > 0 && aprAvg > 0) {
+    finalGrade = (evalsAvg + aprAvg) / 2;
+  } else if (evalsAvg > 0) {
+    finalGrade = evalsAvg;
+  } else if (aprAvg > 0) {
+    finalGrade = aprAvg;
+  }
+
+  return finalGrade > 0 ? <span>{finalGrade.toFixed(1)}</span> : <span>-</span>;
 }
 
 function TotemTab({ classId, className }: { classId: number, className: string }) {
@@ -1190,10 +1268,16 @@ function EvaluationsTab({ evaluations, unidades, classId, onStartGrading }: { ev
       if (!res.ok) throw new Error("Erro ao criar avaliação");
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/turmas", classId] });
+      // Invalida também a listagem de notas para garantir que a tabela de notas finais atualize
+      queryClient.invalidateQueries({ queryKey: [api.notas.listarPorTurma.path, classId] });
       setDialogOpen(false);
       form.reset();
+      toast({
+        title: "Sucesso",
+        description: "Avaliação criada e notas inicializadas para os alunos.",
+      });
     }
   });
 
