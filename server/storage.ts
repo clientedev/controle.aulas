@@ -3,14 +3,15 @@ import { eq, and, sql } from "drizzle-orm";
 import { format } from "date-fns";
 import {
   usuarios, turmas, alunos, matriculas, avaliacoes, notas, horarios, frequencia, unidadesCurriculares, fotosAlunos,
-  criteriosAvaliacao, criteriosAtendidos, notasCriterios,
+  criteriosAvaliacao, criteriosAtendidos, notasCriterios, salas, computadores,
   type Usuario, type InsertUsuario, type Turma, type InsertTurma,
   type Aluno, type InsertAluno, type Avaliacao, type InsertAvaliacao,
   type Nota, type InsertNota, type TurmaComDetalhes, type UnidadeCurricular, type InsertUnidadeCurricular,
   type Horario, type InsertHorario, type Frequencia, type InsertFrequencia,
   type FotoAluno, type InsertFotoAluno, type CriterioAvaliacao, type InsertCriterioAvaliacao,
   type CriterioAtendido, type InsertCriterioAtendido,
-  type NotaCriterio, type InsertNotaCriterio
+  type NotaCriterio, type InsertNotaCriterio,
+  type Sala, type InsertSala, type Computador, type InsertComputador
 } from "@shared/schema";
 import session from "express-session";
 import MemoryStore from "memorystore";
@@ -85,6 +86,16 @@ export interface IStorage {
   getNotaCriterio(alunoId: number, ucId: number): Promise<NotaCriterio | undefined>;
   registrarNotaCriterio(data: InsertNotaCriterio): Promise<NotaCriterio>;
   getCriteriosDaUC(ucId: number): Promise<CriterioAvaliacao[]>;
+
+  // Mapa de Sala
+  getSalaDaTurma(turmaId: number): Promise<Sala | undefined>;
+  criarSala(data: InsertSala): Promise<Sala>;
+  atualizarSala(id: number, data: Partial<InsertSala>): Promise<Sala>;
+  excluirSala(id: number): Promise<void>;
+  getComputadoresDaSala(salaId: number): Promise<(Computador & { aluno?: Aluno })[]>;
+  criarComputador(data: InsertComputador): Promise<Computador>;
+  atualizarComputador(id: number, data: Partial<InsertComputador>): Promise<Computador>;
+  excluirComputador(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -641,6 +652,53 @@ export class DatabaseStorage implements IStorage {
 
   private async recalcularNotaAluno(alunoId: number, criterioId: number) {
     // Legado mantido para não quebrar interface se chamada
+  }
+
+  // Mapa de Sala
+  async getSalaDaTurma(turmaId: number): Promise<Sala | undefined> {
+    const [sala] = await db.select().from(salas).where(eq(salas.turmaId, turmaId));
+    return sala;
+  }
+
+  async criarSala(data: InsertSala): Promise<Sala> {
+    const [sala] = await db.insert(salas).values(data).returning();
+    return sala;
+  }
+
+  async atualizarSala(id: number, data: Partial<InsertSala>): Promise<Sala> {
+    const [sala] = await db.update(salas).set(data).where(eq(salas.id, id)).returning();
+    return sala;
+  }
+
+  async excluirSala(id: number): Promise<void> {
+    await db.delete(salas).where(eq(salas.id, id));
+  }
+
+  async getComputadoresDaSala(salaId: number): Promise<(Computador & { aluno?: Aluno })[]> {
+    const result = await db
+      .select()
+      .from(computadores)
+      .leftJoin(alunos, eq(computadores.alunoId, alunos.id))
+      .where(eq(computadores.salaId, salaId));
+
+    return result.map(r => ({
+      ...r.computadores,
+      aluno: r.alunos || undefined
+    }));
+  }
+
+  async criarComputador(data: InsertComputador): Promise<Computador> {
+    const [comp] = await db.insert(computadores).values(data).returning();
+    return comp;
+  }
+
+  async atualizarComputador(id: number, data: Partial<InsertComputador>): Promise<Computador> {
+    const [comp] = await db.update(computadores).set(data).where(eq(computadores.id, id)).returning();
+    return comp;
+  }
+
+  async excluirComputador(id: number): Promise<void> {
+    await db.delete(computadores).where(eq(computadores.id, id));
   }
 }
 

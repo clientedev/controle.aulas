@@ -567,6 +567,78 @@ export async function registerRoutes(
     res.json(result);
   });
 
+  // === MAPA DE SALA ===
+
+  app.get("/api/turmas/:id/sala", autenticar, async (req, res) => {
+    const turmaId = Number(req.params.id);
+    const sala = await storage.getSalaDaTurma(turmaId);
+    if (!sala) {
+      return res.status(404).json({ mensagem: "Sala não encontrada" });
+    }
+    const computadoresComAlunos = await storage.getComputadoresDaSala(sala.id);
+    res.json({ ...sala, computadores: computadoresComAlunos });
+  });
+
+  app.post("/api/turmas/:id/sala", autenticar, async (req, res) => {
+    const turmaId = Number(req.params.id);
+    const { nome } = req.body;
+    if (!nome) {
+      return res.status(400).json({ mensagem: "Nome da sala é obrigatório" });
+    }
+    const existente = await storage.getSalaDaTurma(turmaId);
+    if (existente) {
+      return res.status(400).json({ mensagem: "Turma já possui uma sala" });
+    }
+    const sala = await storage.criarSala({ turmaId, nome });
+    res.status(201).json({ ...sala, computadores: [] });
+  });
+
+  app.patch("/api/salas/:id", autenticar, async (req, res) => {
+    const id = Number(req.params.id);
+    const { nome } = req.body;
+    const sala = await storage.atualizarSala(id, { nome });
+    res.json(sala);
+  });
+
+  app.delete("/api/salas/:id", autenticar, async (req, res) => {
+    const id = Number(req.params.id);
+    await storage.excluirSala(id);
+    res.status(204).end();
+  });
+
+  app.post("/api/salas/:id/computadores", autenticar, async (req, res) => {
+    const salaId = Number(req.params.id);
+    const { numero, posX, posY, alunoId } = req.body;
+    if (numero === undefined) {
+      return res.status(400).json({ mensagem: "Número do computador é obrigatório" });
+    }
+    const comp = await storage.criarComputador({
+      salaId,
+      numero: Number(numero),
+      posX: posX || 100,
+      posY: posY || 100,
+      alunoId: alunoId ? Number(alunoId) : null
+    });
+    res.status(201).json(comp);
+  });
+
+  app.patch("/api/computadores/:id", autenticar, async (req, res) => {
+    const id = Number(req.params.id);
+    const { posX, posY, alunoId } = req.body;
+    const updates: any = {};
+    if (posX !== undefined) updates.posX = Number(posX);
+    if (posY !== undefined) updates.posY = Number(posY);
+    if (alunoId !== undefined) updates.alunoId = alunoId === null ? null : Number(alunoId);
+    const comp = await storage.atualizarComputador(id, updates);
+    res.json(comp);
+  });
+
+  app.delete("/api/computadores/:id", autenticar, async (req, res) => {
+    const id = Number(req.params.id);
+    await storage.excluirComputador(id);
+    res.status(204).end();
+  });
+
   // Seed Admin User
   (async () => {
     const admin = await storage.getUsuarioPorEmail("admin@senai.br");
