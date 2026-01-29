@@ -128,12 +128,8 @@ export class DatabaseStorage implements IStorage {
       const alunosTurma = await this.getAlunosDaTurma(id);
       const ucs = await this.getUnidadesCurricularesDaTurma(id);
       
-      // Buscar avaliações de todas as UCs da turma
-      const avs: Avaliacao[] = [];
-      for (const uc of ucs) {
-        const ucas = await db.select().from(avaliacoes).where(eq(avaliacoes.unidadeCurricularId, uc.id));
-        avs.push(...ucas);
-      }
+      // Buscar avaliações diretamente da turma
+      const avs = await this.getAvaliacoesDaTurma(id);
 
       const contagem = await db
         .select({ count: matriculas.id })
@@ -389,8 +385,7 @@ export class DatabaseStorage implements IStorage {
     })
     .from(notas)
     .innerJoin(avaliacoes, eq(notas.avaliacaoId, avaliacoes.id))
-    .innerJoin(unidadesCurriculares, eq(avaliacoes.unidadeCurricularId, unidadesCurriculares.id))
-    .where(eq(unidadesCurriculares.turmaId, turmaId));
+    .where(eq(avaliacoes.turmaId, turmaId));
 
     return resultados.map(r => r.nota);
   }
