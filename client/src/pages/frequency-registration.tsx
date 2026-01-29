@@ -440,7 +440,7 @@ export default function FrequencyRegistration() {
       // IMPORTANT: This invalidates the specific query used in class-details.tsx
       const today = variables.data || new Date().toISOString().split('T')[0];
       queryClient.invalidateQueries({ 
-        queryKey: ["/api/turmas", variables.turmaId, "frequencia"] 
+        queryKey: ["/api/turmas", variables.turmaId, "frequencia", today] 
       });
       
       console.log("Totem: Sucesso no registro. Aguardando ação do usuário...");
