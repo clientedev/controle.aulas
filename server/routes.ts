@@ -273,16 +273,24 @@ export async function registerRoutes(
     const turmaId = Number(req.params.id);
     try {
       const input = req.body;
+      console.log("Criando avaliação para turma:", turmaId, "Input:", input);
+      
+      // Validação básica manual para evitar 400 silencioso
+      if (!input.nome) {
+        return res.status(400).json({ mensagem: "Nome da avaliação é obrigatório" });
+      }
+
       const avaliacao = await storage.criarAvaliacao({ 
         nome: input.nome,
-        notaMaxima: parseFloat(input.notaMaxima) || 100,
+        notaMaxima: parseFloat(input.notaMaxima) || 10,
         peso: parseFloat(input.peso) || 1,
         turmaId,
-        unidadeCurricularId: input.unidadeCurricularId ? Number(input.unidadeCurricularId) : null
+        unidadeCurricularId: (input.unidadeCurricularId && input.unidadeCurricularId !== "none") ? Number(input.unidadeCurricularId) : null
       });
       res.status(201).json(avaliacao);
-    } catch (err) {
-      res.status(400).json({ mensagem: "Erro ao criar avaliação" });
+    } catch (err: any) {
+      console.error("Erro ao criar avaliação:", err);
+      res.status(400).json({ mensagem: "Erro ao criar avaliação", detalhes: err.message });
     }
   });
 
