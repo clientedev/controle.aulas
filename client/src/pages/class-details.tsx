@@ -37,7 +37,7 @@ import * as XLSX from "xlsx";
 import { api } from "@shared/routes";
 
 const createEvaluationSchema = z.object({
-  unidadeCurricularId: z.string().min(1, "Selecione a unidade"),
+  unidadeCurricularId: z.string().optional(),
   nome: z.string().min(2, "Nome obrigatório"),
   notaMaxima: z.string().transform(val => parseFloat(val) || 100),
   peso: z.string().transform(val => parseFloat(val) || 1),
@@ -1182,7 +1182,7 @@ function EvaluationsTab({ evaluations, unidades, classId, onStartGrading }: { ev
   const { toast } = useToast();
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await fetch(`/api/unidades-curriculares/${data.unidadeCurricularId}/avaliacoes`, {
+      const res = await fetch(`/api/turmas/${classId}/avaliacoes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -1233,31 +1233,32 @@ function EvaluationsTab({ evaluations, unidades, classId, onStartGrading }: { ev
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
                 <FormField
                   control={form.control}
-                  name="unidadeCurricularId"
+                  name="nome"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Unidade Curricular</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {unidades.map(u => (
-                            <SelectItem key={u.id} value={u.id.toString()}>{u.nome}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormLabel>Nome da Avaliação</FormLabel>
+                      <FormControl><Input placeholder="P1, Projeto Final..." {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <FormField
                   control={form.control}
-                  name="nome"
+                  name="unidadeCurricularId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nome da Avaliação</FormLabel>
-                      <FormControl><Input placeholder="P1, Projeto Final..." {...field} /></FormControl>
+                      <FormLabel>Unidade Curricular (Opcional)</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">Nenhuma (Geral)</SelectItem>
+                          {unidades.map(u => (
+                            <SelectItem key={u.id} value={u.id.toString()}>{u.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1304,35 +1305,38 @@ function EvaluationsTab({ evaluations, unidades, classId, onStartGrading }: { ev
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Unidade</TableHead>
                 <TableHead>Nome</TableHead>
+                <TableHead>Unidade</TableHead>
                 <TableHead className="text-center">Nota Máxima</TableHead>
                 <TableHead className="text-center">Peso</TableHead>
                 <TableHead className="text-right">Ação</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {evaluations.map((evalu) => (
-                <TableRow key={evalu.id}>
-                  <TableCell className="font-medium">
-                    {unidades.find(u => u.id === evalu.unidadeCurricularId)?.nome}
-                  </TableCell>
-                  <TableCell>{evalu.nome}</TableCell>
-                  <TableCell className="text-center">{evalu.notaMaxima}</TableCell>
-                  <TableCell className="text-center">{evalu.peso}</TableCell>
-                  <TableCell className="text-right">
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            className="hover:bg-primary/10 text-primary"
-                            onClick={() => onStartGrading(evalu)}
-                            data-testid={`button-grade-evaluation-${evalu.id}`}
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {evaluations.map((evalu) => {
+                const uc = unidades.find(u => u.id === evalu.unidadeCurricularId);
+                return (
+                  <TableRow key={evalu.id}>
+                    <TableCell className="font-medium">{evalu.nome}</TableCell>
+                    <TableCell>
+                      {uc ? <Badge variant="outline">{uc.nome}</Badge> : <Badge variant="secondary">Geral</Badge>}
+                    </TableCell>
+                    <TableCell className="text-center">{evalu.notaMaxima}</TableCell>
+                    <TableCell className="text-center">{evalu.peso}</TableCell>
+                    <TableCell className="text-right">
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="hover:bg-primary/10 text-primary"
+                        onClick={() => onStartGrading(evalu)}
+                        data-testid={`button-grade-evaluation-${evalu.id}`}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         )}

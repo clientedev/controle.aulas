@@ -44,7 +44,8 @@ export const matriculas = pgTable("matriculas", {
 
 export const avaliacoes = pgTable("avaliacoes", {
   id: serial("id").primaryKey(),
-  unidadeCurricularId: integer("unidade_curricular_id").references(() => unidadesCurriculares.id, { onDelete: "cascade" }).notNull(),
+  turmaId: integer("turma_id").references(() => turmas.id, { onDelete: "cascade" }).notNull(),
+  unidadeCurricularId: integer("unidade_curricular_id").references(() => unidadesCurriculares.id, { onDelete: "cascade" }), // Agora opcional
   nome: text("nome").notNull(), // ex: "Prova 1", "Trabalho Final"
   notaMaxima: doublePrecision("nota_maxima").notNull().default(100.0),
   peso: doublePrecision("peso").default(1.0),

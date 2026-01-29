@@ -335,14 +335,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAvaliacoesDaTurma(turmaId: number): Promise<Avaliacao[]> {
-    const resultados = await db.select({
-      avaliacao: avaliacoes
-    })
-    .from(avaliacoes)
-    .innerJoin(unidadesCurriculares, eq(avaliacoes.unidadeCurricularId, unidadesCurriculares.id))
-    .where(eq(unidadesCurriculares.turmaId, turmaId));
-
-    return resultados.map(r => r.avaliacao);
+    return await db.select().from(avaliacoes).where(eq(avaliacoes.turmaId, turmaId));
   }
 
   async getAvaliacoesDaUnidadeCurricular(unidadeCurricularId: number): Promise<Avaliacao[]> {
@@ -354,22 +347,19 @@ export class DatabaseStorage implements IStorage {
     
     // Criar notas para todos os alunos matriculados na turma
     try {
-      // Buscar a UC para pegar a turma
-      const [uc] = await db.select().from(unidadesCurriculares).where(eq(unidadesCurriculares.id, data.unidadeCurricularId));
-      if (uc) {
-        // Buscar alunos da turma
-        const alunosTurma = await this.getAlunosDaTurma(uc.turmaId);
-        
-        // Criar notas com valor 0 para cada aluno
-        for (const aluno of alunosTurma) {
-          await db.insert(notas).values({
-            avaliacaoId: a.id,
-            alunoId: aluno.id,
-            valor: 0
-          }).onConflictDoNothing();
-        }
-        console.log(`Criadas ${alunosTurma.length} notas para a avaliacao ${a.id}`);
+      const turmaId = data.turmaId;
+      // Buscar alunos da turma
+      const alunosTurma = await this.getAlunosDaTurma(turmaId);
+      
+      // Criar notas com valor 0 para cada aluno
+      for (const aluno of alunosTurma) {
+        await db.insert(notas).values({
+          avaliacaoId: a.id,
+          alunoId: aluno.id,
+          valor: 0
+        }).onConflictDoNothing();
       }
+      console.log(`Criadas ${alunosTurma.length} notas para a avaliacao ${a.id}`);
     } catch (error) {
       console.error("Erro ao criar notas automaticas:", error);
     }
