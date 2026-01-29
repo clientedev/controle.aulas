@@ -190,6 +190,7 @@ export default function ClassDetails() {
               classId={classId}
               students={classData.alunos || []}
               unidades={classData.unidadesCurriculares || []}
+              evaluations={(classData as any).avaliacoes || []}
             />
           </TabsContent>
 
@@ -310,22 +311,17 @@ function GradingView({ evaluation, students, onBack }: { evaluation: any, studen
   );
 }
 
-function FinalGradesTab({ classId, students, unidades }: { classId: number, students: any[], unidades: any[] }) {
+function FinalGradesTab({ classId, students, unidades, evaluations: initialEvaluations }: { classId: number, students: any[], unidades: any[], evaluations: any[] }) {
   const { data: grades } = useClassGrades(classId);
-  const { data: allNotes } = useQuery<any[]>({
-    queryKey: ["/api/all-notes", classId],
-    queryFn: async () => {
-      const res = await fetch(`/api/turmas/${classId}/notas-com-criterios`);
-      if (!res.ok) return [];
-      return res.json();
-    }
+  
+  // Garantir que as avaliações tenham o nome da UC
+  const evaluations = initialEvaluations.map(ev => {
+    const uc = unidades.find(u => u.id === ev.unidadeCurricularId);
+    return {
+      ...ev,
+      ucNome: uc?.nome || "UC"
+    };
   });
-
-  // Pegar todas as avaliações de todas as UCs desta turma
-  const evaluations = unidades.flatMap(uc => (uc.avaliacoes || []).map((ev: any) => ({
-    ...ev,
-    ucNome: uc.nome
-  })));
   
   return (
     <Card>
@@ -340,16 +336,16 @@ function FinalGradesTab({ classId, students, unidades }: { classId: number, stud
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="min-w-[200px] sticky left-0 bg-background z-20 border-r">Aluno</TableHead>
+                <TableHead className="min-w-[200px] sticky left-0 bg-background z-20 border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Aluno</TableHead>
                 {evaluations.map(ev => (
                   <TableHead key={ev.id} className="text-center min-w-[120px] border-r">
                     <div className="flex flex-col gap-1">
-                      <span className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">{ev.ucNome}</span>
-                      <span className="text-sm">{ev.nome}</span>
+                      <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">{ev.ucNome}</span>
+                      <span className="text-sm font-bold">{ev.nome}</span>
                     </div>
                   </TableHead>
                 ))}
-                <TableHead className="text-center font-bold min-w-[100px] sticky right-0 bg-background z-20 border-l">Média Final</TableHead>
+                <TableHead className="text-center font-bold min-w-[100px] sticky right-0 bg-background z-20 border-l shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">Média Final</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -370,7 +366,7 @@ function FinalGradesTab({ classId, students, unidades }: { classId: number, stud
 
                 return (
                   <TableRow key={student.id}>
-                    <TableCell className="font-medium sticky left-0 bg-background z-10 border-r">{student.nome}</TableCell>
+                    <TableCell className="font-medium sticky left-0 bg-background z-10 border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">{student.nome}</TableCell>
                     {evaluations.map(ev => {
                       const grade = gradesByEval[ev.id];
                       return (
@@ -379,7 +375,7 @@ function FinalGradesTab({ classId, students, unidades }: { classId: number, stud
                         </TableCell>
                       );
                     })}
-                    <TableCell className="text-center font-bold text-primary sticky right-0 bg-background z-10 border-l">
+                    <TableCell className="text-center font-bold text-primary sticky right-0 bg-background z-10 border-l shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                       {finalAvg > 0 ? Number(finalAvg).toFixed(1) : "-"}
                     </TableCell>
                   </TableRow>
