@@ -1710,14 +1710,15 @@ function MapaSalaTab({ classId, students }: { classId: number; students: any[] }
   });
 
   const todayStr = format(new Date(), "yyyy-MM-dd");
-  const { data: frequenciaHoje } = useQuery<any[]>({
+  const { data: frequenciaHoje, refetch: refetchFrequencia } = useQuery<any[]>({
     queryKey: ["/api/turmas", classId, "frequencia", todayStr],
     queryFn: async () => {
       const res = await fetch(`/api/turmas/${classId}/frequencia?data=${todayStr}`, { credentials: "include" });
       if (!res.ok) return [];
       return res.json();
     },
-    enabled: !!salaData
+    enabled: !!salaData,
+    refetchInterval: 5000 // Atualiza a cada 5 segundos
   });
 
   const criarSalaMutation = useMutation({
