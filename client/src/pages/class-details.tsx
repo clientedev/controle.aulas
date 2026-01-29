@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
   ArrowLeft, Plus, Trash2, UserPlus, FileText, AlertCircle, 
-  Users, MoreHorizontal, Upload, BookOpen, Clock, Check, X, Minus, Download, Pencil, Camera 
+  Users, MoreHorizontal, Upload, BookOpen, Clock, Check, X, Minus, Download, Pencil, Camera, Monitor, GripVertical 
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useClass, useDeleteClass } from "@/hooks/use-classes";
@@ -140,6 +140,13 @@ export default function ClassDetails() {
             >
               Totem
             </TabsTrigger>
+            <TabsTrigger 
+              value="mapa-sala" 
+              className="rounded-none border-b-2 border-transparent px-4 py-3 font-medium data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary"
+              data-testid="tab-mapa-sala"
+            >
+              Mapa de Sala
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="students" className="animate-in fade-in-50 slide-in-from-bottom-2 duration-300">
@@ -196,6 +203,10 @@ export default function ClassDetails() {
 
           <TabsContent value="totem" className="animate-in fade-in-50 slide-in-from-bottom-2 duration-300">
             <TotemTab classId={classId} className={classData.nome} />
+          </TabsContent>
+
+          <TabsContent value="mapa-sala" className="animate-in fade-in-50 slide-in-from-bottom-2 duration-300">
+            <MapaSalaTab classId={classId} students={classData.alunos || []} />
           </TabsContent>
         </Tabs>
       </div>
@@ -1662,6 +1673,291 @@ function AttendanceTab({ classId, students }: { classId: number, students: any[]
         </Table>
       </CardContent>
     </Card>
+  );
+}
+
+interface ComputadorData {
+  id: number;
+  numero: number;
+  posX: number;
+  posY: number;
+  alunoId: number | null;
+  aluno?: { id: number; nome: string };
+}
+
+interface SalaData {
+  id: number;
+  turmaId: number;
+  nome: string;
+  computadores: ComputadorData[];
+}
+
+function MapaSalaTab({ classId, students }: { classId: number; students: any[] }) {
+  const { toast } = useToast();
+  const [nomeSala, setNomeSala] = useState("");
+  const [draggingId, setDraggingId] = useState<number | null>(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const canvasRef = useRef<HTMLDivElement>(null);
+  
+  const { data: salaData, isLoading, refetch } = useQuery<SalaData>({
+    queryKey: ["/api/turmas", classId, "sala"],
+    queryFn: async () => {
+      const res = await fetch(`/api/turmas/${classId}/sala`, { credentials: "include" });
+      if (res.status === 404) return null;
+      if (!res.ok) throw new Error("Erro ao carregar sala");
+      return res.json();
+    }
+  });
+
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const { data: frequenciaHoje } = useQuery<any[]>({
+    queryKey: ["/api/turmas", classId, "frequencia", todayStr],
+    queryFn: async () => {
+      const res = await fetch(`/api/turmas/${classId}/frequencia?data=${todayStr}`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!salaData
+  });
+
+  const criarSalaMutation = useMutation({
+    mutationFn: async (nome: string) => {
+      const res = await fetch(`/api/turmas/${classId}/sala`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ nome })
+      });
+      if (!res.ok) throw new Error("Erro ao criar sala");
+      return res.json();
+    },
+    onSuccess: () => {
+      refetch();
+      toast({ title: "Sucesso", description: "Sala criada!" });
+    }
+  });
+
+  const adicionarComputadorMutation = useMutation({
+    mutationFn: async (data: { numero: number; posX: number; posY: number }) => {
+      const res = await fetch(`/api/salas/${salaData!.id}/computadores`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error("Erro ao adicionar computador");
+      return res.json();
+    },
+    onSuccess: () => refetch()
+  });
+
+  const atualizarComputadorMutation = useMutation({
+    mutationFn: async ({ id, ...data }: { id: number; posX?: number; posY?: number; alunoId?: number | null }) => {
+      const res = await fetch(`/api/computadores/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error("Erro ao atualizar computador");
+      return res.json();
+    },
+    onSuccess: () => refetch()
+  });
+
+  const excluirComputadorMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/computadores/${id}`, {
+        method: "DELETE",
+        credentials: "include"
+      });
+      if (!res.ok) throw new Error("Erro ao excluir computador");
+    },
+    onSuccess: () => refetch()
+  });
+
+  const getStatusColor = (comp: ComputadorData): string => {
+    if (!comp.alunoId) return "bg-gray-400";
+    if (!frequenciaHoje) return "bg-gray-400";
+    const presente = frequenciaHoje.find((f: any) => f.alunoId === comp.alunoId && f.presente === 1);
+    return presente ? "bg-green-500" : "bg-red-500";
+  };
+
+  const handleMouseDown = (e: React.MouseEvent, comp: ComputadorData) => {
+    if (!canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    setDraggingId(comp.id);
+    setDragOffset({
+      x: e.clientX - rect.left - comp.posX,
+      y: e.clientY - rect.top - comp.posY
+    });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (draggingId === null || !canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const newX = Math.max(0, Math.min(rect.width - 80, e.clientX - rect.left - dragOffset.x));
+    const newY = Math.max(0, Math.min(rect.height - 80, e.clientY - rect.top - dragOffset.y));
+    const compDiv = document.getElementById(`comp-${draggingId}`);
+    if (compDiv) {
+      compDiv.style.left = `${newX}px`;
+      compDiv.style.top = `${newY}px`;
+    }
+  };
+
+  const handleMouseUp = (e: React.MouseEvent) => {
+    if (draggingId === null || !canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const newX = Math.max(0, Math.min(rect.width - 80, e.clientX - rect.left - dragOffset.x));
+    const newY = Math.max(0, Math.min(rect.height - 80, e.clientY - rect.top - dragOffset.y));
+    atualizarComputadorMutation.mutate({ id: draggingId, posX: Math.round(newX), posY: Math.round(newY) });
+    setDraggingId(null);
+  };
+
+  const adicionarNovoComputador = () => {
+    if (!salaData) return;
+    const maxNumero = salaData.computadores.reduce((max, c) => Math.max(max, c.numero), 0);
+    adicionarComputadorMutation.mutate({ numero: maxNumero + 1, posX: 100 + (maxNumero * 20) % 300, posY: 100 + Math.floor(maxNumero / 5) * 100 });
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <Skeleton className="h-96 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!salaData) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Monitor className="h-5 w-5" />
+            Criar Mapa de Sala
+          </CardTitle>
+          <CardDescription>Configure o layout da sala de aula para esta turma</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <Input 
+              placeholder="Nome da sala (ex: Laboratório 01)"
+              value={nomeSala}
+              onChange={(e) => setNomeSala(e.target.value)}
+              data-testid="input-nome-sala"
+            />
+            <Button 
+              onClick={() => nomeSala && criarSalaMutation.mutate(nomeSala)}
+              disabled={!nomeSala || criarSalaMutation.isPending}
+              data-testid="button-criar-sala"
+            >
+              <Plus className="h-4 w-4 mr-2" /> Criar Sala
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const alunosNaoAtribuidos = students.filter(s => !salaData.computadores.find(c => c.alunoId === s.id));
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-2">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Monitor className="h-5 w-5" />
+              {salaData.nome}
+            </CardTitle>
+            <CardDescription>Arraste os computadores para posicioná-los. Clique para atribuir alunos.</CardDescription>
+          </div>
+          <Button onClick={adicionarNovoComputador} data-testid="button-adicionar-computador">
+            <Plus className="h-4 w-4 mr-2" /> Adicionar Computador
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-4 mb-4 text-sm">
+            <div className="flex items-center gap-2"><div className="w-4 h-4 rounded bg-gray-400" /> Sem aluno</div>
+            <div className="flex items-center gap-2"><div className="w-4 h-4 rounded bg-red-500" /> Ausente</div>
+            <div className="flex items-center gap-2"><div className="w-4 h-4 rounded bg-green-500" /> Presente</div>
+          </div>
+          <div 
+            ref={canvasRef}
+            className="relative border-2 border-dashed rounded-lg bg-muted/50"
+            style={{ height: "500px", minWidth: "100%" }}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={() => setDraggingId(null)}
+            data-testid="canvas-sala"
+          >
+            {salaData.computadores.map((comp) => (
+              <div
+                key={comp.id}
+                id={`comp-${comp.id}`}
+                className={`absolute cursor-move select-none rounded-lg p-2 shadow-md border-2 border-white ${getStatusColor(comp)} text-white transition-shadow hover:shadow-lg`}
+                style={{ left: comp.posX, top: comp.posY, width: 80 }}
+                onMouseDown={(e) => handleMouseDown(e, comp)}
+                data-testid={`computador-${comp.id}`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <GripVertical className="h-4 w-4 opacity-50" />
+                  <span className="font-bold text-lg">{comp.numero}</span>
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    className="h-5 w-5 p-0 text-white hover:text-red-200 hover:bg-transparent"
+                    onClick={(e) => { e.stopPropagation(); excluirComputadorMutation.mutate(comp.id); }}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+                <div className="text-xs text-center truncate">
+                  {comp.aluno?.nome?.split(' ')[0] || '-'}
+                </div>
+                <Select
+                  value={comp.alunoId?.toString() || "none"}
+                  onValueChange={(val) => {
+                    const alunoId = val === "none" ? null : Number(val);
+                    atualizarComputadorMutation.mutate({ id: comp.id, alunoId });
+                  }}
+                >
+                  <SelectTrigger 
+                    className="h-6 text-xs mt-1 bg-white/20 border-white/30 text-white"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <SelectValue placeholder="Atribuir" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {students.map(s => (
+                      <SelectItem key={s.id} value={s.id.toString()}>{s.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {alunosNaoAtribuidos.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Alunos sem computador atribuído</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {alunosNaoAtribuidos.map(a => (
+                <Badge key={a.id} variant="secondary">{a.nome}</Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }
 
