@@ -109,15 +109,23 @@ export async function registerRoutes(
     res.json(turmas);
   });
 
-  app.get(api.turmas.obter.path, autenticar, async (req, res) => {
-    const id = Number(req.params.id);
-    const turma = await storage.getTurma(id);
-    if (!turma) return res.status(404).json({ mensagem: "Turma não encontrada" });
+  app.get(api.turmas.obter.path, autenticar, async (req: any, res) => {
+    try {
+      const id = Number(req.params.id);
+      const turma = await storage.getTurma(id);
+      if (!turma) return res.status(404).json({ mensagem: "Turma não encontrada" });
 
-    const alunos = await storage.getAlunosDaTurma(id);
-    const unidadesCurriculares = await storage.getUnidadesCurricularesDaTurma(id);
+      // Verificar se o professor tem acesso à turma (ou se é admin)
+      const usuario = await storage.getUsuario(req.session.usuarioId);
+      if (usuario?.perfil !== "admin" && turma.professorId !== req.session.usuarioId) {
+        return res.status(403).json({ mensagem: "Acesso negado" });
+      }
 
-    res.json({ ...turma, alunos, unidadesCurriculares });
+      res.json(turma);
+    } catch (err) {
+      console.error("Erro ao obter turma:", err);
+      res.status(500).json({ mensagem: "Erro interno do servidor" });
+    }
   });
 
   app.post("/api/turmas/:id/unidades-curriculares", autenticar, async (req: any, res) => {
