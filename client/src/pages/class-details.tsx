@@ -320,13 +320,16 @@ function FinalGradesTab({ classId, students, unidades }: { classId: number, stud
       return res.json();
     }
   });
+
+  // Pegar todas as avaliações de todas as UCs desta turma
+  const evaluations = unidades.flatMap(uc => uc.avaliacoes || []);
   
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div className="space-y-1">
-          <CardTitle>Média Final por Unidade Curricular</CardTitle>
-          <CardDescription>Cálculo: Média das Avaliações + Critérios</CardDescription>
+          <CardTitle>Média Final por Avaliação</CardTitle>
+          <CardDescription>Notas individuais por avaliação e média final</CardDescription>
         </div>
       </CardHeader>
       <CardContent>
@@ -334,38 +337,39 @@ function FinalGradesTab({ classId, students, unidades }: { classId: number, stud
           <TableHeader>
             <TableRow>
               <TableHead>Aluno</TableHead>
-              {unidades.map(uc => (
-                <TableHead key={uc.id} className="text-center">{uc.nome}</TableHead>
+              {evaluations.map(ev => (
+                <TableHead key={ev.id} className="text-center">{ev.nome}</TableHead>
               ))}
+              <TableHead className="text-center font-bold">Média Final</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {students.map(student => (
-              <TableRow key={student.id}>
-                <TableCell className="font-medium">{student.nome}</TableCell>
-                {unidades.map(uc => {
-                  const ucGrades = grades?.filter((g: any) => g.unidadeCurricularId === uc.id && g.alunoId === student.id) || [];
-                  
-                  // Agrupar por avaliação para garantir que pegamos a última nota de cada
-                  const gradesByEval: Record<number, number> = {};
-                  ucGrades.forEach((g: any) => {
-                    gradesByEval[g.avaliacaoId] = g.valor;
-                  });
-                  
-                  const evalValues = Object.values(gradesByEval);
-                  const evaluationsAvg = evalValues.length > 0 
-                    ? (evalValues.reduce((acc, val) => acc + val, 0) / evalValues.length) 
-                    : 0;
-                  
-                  const studentData = allNotes?.find(n => n.alunoId === student.id && n.unidadeCurricularId === uc.id);
-                  const finalGrade = studentData?.notaFinal ?? evaluationsAvg;
-                  
-                  return <TableCell key={uc.id} className="text-center font-bold">
-                    {Number(finalGrade).toFixed(1)}
-                  </TableCell>;
-                })}
-              </TableRow>
-            ))}
+            {students.map(student => {
+              const studentGrades = grades?.filter((g: any) => g.alunoId === student.id) || [];
+              
+              // Calcular média final (considerando todas as UCs do aluno)
+              const studentAllNotes = allNotes?.filter(n => n.alunoId === student.id) || [];
+              const finalAvg = studentAllNotes.length > 0
+                ? (studentAllNotes.reduce((acc, n) => acc + (n.notaFinal || 0), 0) / studentAllNotes.length)
+                : 0;
+
+              return (
+                <TableRow key={student.id}>
+                  <TableCell className="font-medium">{student.nome}</TableCell>
+                  {evaluations.map(ev => {
+                    const grade = studentGrades.find((g: any) => g.avaliacaoId === ev.id);
+                    return (
+                      <TableCell key={ev.id} className="text-center">
+                        {grade ? Number(grade.valor).toFixed(1) : "-"}
+                      </TableCell>
+                    );
+                  })}
+                  <TableCell className="text-center font-bold text-primary">
+                    {finalAvg > 0 ? Number(finalAvg).toFixed(1) : "-"}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </CardContent>
