@@ -5,7 +5,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
   ArrowLeft, Plus, Trash2, UserPlus, FileText, AlertCircle, 
-  Users, MoreHorizontal, Upload, BookOpen, Clock, Check, X, Minus, Download, Pencil, Camera, Monitor, GripVertical 
+  Users, MoreHorizontal, Upload, BookOpen, Clock, Check, X, Minus, Download, Pencil, Camera, Monitor, GripVertical,
+  ClipboardList, History, Layout, Save
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 import { useClass, useDeleteClass } from "@/hooks/use-classes";
@@ -15,6 +16,8 @@ import { useUnidadesCurriculares, useCreateUnidadeCurricular } from "@/hooks/use
 import { LayoutShell } from "@/components/layout-shell";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -1697,6 +1700,10 @@ function MapaSalaTab({ classId, students }: { classId: number; students: any[] }
   const [nomeSala, setNomeSala] = useState("");
   const [draggingId, setDraggingId] = useState<number | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [selectedComp, setSelectedComp] = useState<any | null>(null);
+  const [showOccurrenceDialog, setShowOccurrenceDialog] = useState(false);
+  const [newOccurrence, setNewOccurrence] = useState("");
+  const [anotacoes, setAnotacoes] = useState("");
   const canvasRef = useRef<HTMLDivElement>(null);
   
   const { data: salaData, isLoading, refetch } = useQuery<SalaData>({
@@ -1705,20 +1712,27 @@ function MapaSalaTab({ classId, students }: { classId: number; students: any[] }
       const res = await fetch(`/api/turmas/${classId}/sala`, { credentials: "include" });
       if (res.status === 404) return null;
       if (!res.ok) throw new Error("Erro ao carregar sala");
-      return res.json();
-    }
+      const data = await res.json();
+      return data;
+    },
+    refetchInterval: 5000
   });
 
+  useEffect(() => {
+    if (salaData?.anotacoes) {
+      setAnotacoes(salaData.anotacoes);
+    }
+  }, [salaData]);
+
   const todayStr = format(new Date(), "yyyy-MM-dd");
-  const { data: frequenciaHoje, refetch: refetchFrequencia } = useQuery<any[]>({
+  const { data: frequenciaHoje } = useQuery<any[]>({
     queryKey: ["/api/turmas", classId, "frequencia", todayStr],
     queryFn: async () => {
       const res = await fetch(`/api/turmas/${classId}/frequencia?data=${todayStr}`, { credentials: "include" });
       if (!res.ok) return [];
       return res.json();
     },
-    enabled: !!salaData,
-    refetchInterval: 5000 // Atualiza a cada 5 segundos
+    enabled: !!salaData
   });
 
   const criarSalaMutation = useMutation({
@@ -1777,12 +1791,64 @@ function MapaSalaTab({ classId, students }: { classId: number; students: any[] }
     onSuccess: () => refetch()
   });
 
-  const getStatusColor = (comp: ComputadorData): string => {
-    if (!comp.alunoId) return "bg-gray-400";
-    if (!frequenciaHoje || frequenciaHoje.length === 0) return "bg-red-500";
+  const addOccurrenceMutation = useMutation({
+    mutationFn: async ({ compId, desc }: { compId: number, desc: string }) => {
+      const res = await fetch(`/api/computadores/${compId}/ocorrencias`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ descricao: desc })
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      refetch();
+      setNewOccurrence("");
+      toast({ title: "Sucesso", description: "Ocorrência registrada!" });
+    }
+  });
+
+  const resolveOccurrenceMutation = useMutation({
+    mutationFn: async ({ id, resolvido }: { id: number, resolvido: number }) => {
+      const res = await fetch(`/api/ocorrencias/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ resolvido })
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      refetch();
+      toast({ title: "Sucesso", description: "Status atualizado!" });
+    }
+  });
+
+  const saveAnotacoesMutation = useMutation({
+    mutationFn: async (text: string) => {
+      const res = await fetch(`/api/salas/${salaData!.id}/anotacoes`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ anotacoes: text })
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      refetch();
+      toast({ title: "Sucesso", description: "Anotações salvas!" });
+    }
+  });
+
+  const getStatusColor = (comp: any): string => {
+    const temOcorrenciaAtiva = comp.ocorrencias?.some((o: any) => o.resolvido === 0);
+    if (temOcorrenciaAtiva) return "bg-amber-500 border-amber-600";
+
+    if (!comp.alunoId) return "bg-gray-400 border-gray-500";
+    if (!frequenciaHoje || frequenciaHoje.length === 0) return "bg-red-500 border-red-600";
     const statusAluno = frequenciaHoje.find((f: any) => f.alunoId === comp.alunoId);
-    if (!statusAluno) return "bg-red-500";
-    return statusAluno.status === 1 ? "bg-green-500" : "bg-red-500";
+    if (!statusAluno) return "bg-red-500 border-red-600";
+    return statusAluno.status === 1 ? "bg-green-500 border-green-600" : "bg-red-500 border-red-600";
   };
 
   const handleMouseDown = (e: React.MouseEvent, comp: ComputadorData) => {
@@ -1874,17 +1940,43 @@ function MapaSalaTab({ classId, students }: { classId: number; students: any[] }
               <Monitor className="h-5 w-5" />
               {salaData.nome}
             </CardTitle>
-            <CardDescription>Arraste os computadores para posicioná-los. Clique para atribuir alunos.</CardDescription>
+            <CardDescription>Arraste os computadores para posicioná-los. Clique para gerenciar alunos e ocorrências.</CardDescription>
           </div>
-          <Button onClick={adicionarNovoComputador} data-testid="button-adicionar-computador">
-            <Plus className="h-4 w-4 mr-2" /> Adicionar Computador
-          </Button>
+          <div className="flex gap-2">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <ClipboardList className="h-4 w-4 mr-2" /> Anotações
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Anotações da Sala</DialogTitle>
+                </DialogHeader>
+                <Textarea 
+                  className="min-h-[200px]"
+                  placeholder="Notas gerais sobre a sala..."
+                  value={anotacoes}
+                  onChange={(e) => setAnotacoes(e.target.value)}
+                />
+                <DialogFooter>
+                  <Button onClick={() => saveAnotacoesMutation.mutate(anotacoes)}>
+                    Salvar
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            <Button onClick={adicionarNovoComputador} data-testid="button-adicionar-computador">
+              <Plus className="h-4 w-4 mr-2" /> Adicionar Computador
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex gap-4 mb-4 text-sm">
             <div className="flex items-center gap-2"><div className="w-4 h-4 rounded bg-gray-400" /> Sem aluno</div>
             <div className="flex items-center gap-2"><div className="w-4 h-4 rounded bg-red-500" /> Ausente</div>
             <div className="flex items-center gap-2"><div className="w-4 h-4 rounded bg-green-500" /> Presente</div>
+            <div className="flex items-center gap-2"><div className="w-4 h-4 rounded bg-amber-500" /> Ocorrência</div>
           </div>
           <div 
             ref={canvasRef}
@@ -1895,7 +1987,7 @@ function MapaSalaTab({ classId, students }: { classId: number; students: any[] }
             onMouseLeave={() => setDraggingId(null)}
             data-testid="canvas-sala"
           >
-            {salaData.computadores.map((comp) => (
+            {salaData.computadores.map((comp: any) => (
               <div
                 key={comp.id}
                 id={`comp-${comp.id}`}
@@ -1907,14 +1999,28 @@ function MapaSalaTab({ classId, students }: { classId: number; students: any[] }
                 <div className="flex items-center justify-between mb-1">
                   <GripVertical className="h-4 w-4 opacity-50" />
                   <span className="font-bold text-lg">{comp.numero}</span>
-                  <Button 
-                    size="icon" 
-                    variant="ghost" 
-                    className="h-5 w-5 p-0 text-white hover:text-red-200 hover:bg-transparent"
-                    onClick={(e) => { e.stopPropagation(); excluirComputadorMutation.mutate(comp.id); }}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      className="h-5 w-5 p-0 text-white hover:text-amber-200 hover:bg-transparent"
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        setSelectedComp(comp);
+                        setShowOccurrenceDialog(true);
+                      }}
+                    >
+                      <AlertCircle className="h-3 w-3" />
+                    </Button>
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      className="h-5 w-5 p-0 text-white hover:text-red-200 hover:bg-transparent"
+                      onClick={(e) => { e.stopPropagation(); excluirComputadorMutation.mutate(comp.id); }}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="text-xs text-center truncate">
                   {comp.aluno?.nome?.split(' ')[0] || '-'}
@@ -1944,6 +2050,45 @@ function MapaSalaTab({ classId, students }: { classId: number; students: any[] }
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={showOccurrenceDialog} onOpenChange={setShowOccurrenceDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ocorrências - PC {selectedComp?.numero}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <Input 
+                placeholder="Nova ocorrência..." 
+                value={newOccurrence}
+                onChange={(e) => setNewOccurrence(e.target.value)}
+              />
+              <Button onClick={() => addOccurrenceMutation.mutate({ compId: selectedComp.id, desc: newOccurrence })}>
+                Adicionar
+              </Button>
+            </div>
+            <Separator />
+            <ScrollArea className="h-64">
+              <div className="space-y-2">
+                {selectedComp?.ocorrencias?.map((o: any) => (
+                  <div key={o.id} className="flex items-center justify-between p-2 border rounded">
+                    <div className={o.resolvido ? "line-through opacity-50" : ""}>
+                      {o.descricao}
+                    </div>
+                    <Button 
+                      size="sm" 
+                      variant={o.resolvido ? "outline" : "default"}
+                      onClick={() => resolveOccurrenceMutation.mutate({ id: o.id, resolvido: o.resolvido ? 0 : 1 })}
+                    >
+                      {o.resolvido ? "Reabrir" : "Resolver"}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {alunosNaoAtribuidos.length > 0 && (
         <Card>
