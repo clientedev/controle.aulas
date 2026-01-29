@@ -322,7 +322,10 @@ function FinalGradesTab({ classId, students, unidades }: { classId: number, stud
   });
 
   // Pegar todas as avaliações de todas as UCs desta turma
-  const evaluations = unidades.flatMap(uc => uc.avaliacoes || []);
+  const evaluations = unidades.flatMap(uc => (uc.avaliacoes || []).map((ev: any) => ({
+    ...ev,
+    ucNome: uc.nome
+  })));
   
   return (
     <Card>
@@ -333,45 +336,58 @@ function FinalGradesTab({ classId, students, unidades }: { classId: number, stud
         </div>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Aluno</TableHead>
-              {evaluations.map(ev => (
-                <TableHead key={ev.id} className="text-center">{ev.nome}</TableHead>
-              ))}
-              <TableHead className="text-center font-bold">Média Final</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {students.map(student => {
-              const studentGrades = grades?.filter((g: any) => g.alunoId === student.id) || [];
-              
-              // Calcular média final (considerando todas as UCs do aluno)
-              const studentAllNotes = allNotes?.filter(n => n.alunoId === student.id) || [];
-              const finalAvg = studentAllNotes.length > 0
-                ? (studentAllNotes.reduce((acc, n) => acc + (n.notaFinal || 0), 0) / studentAllNotes.length)
-                : 0;
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="min-w-[200px] sticky left-0 bg-background z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Aluno</TableHead>
+                {evaluations.map(ev => (
+                  <TableHead key={ev.id} className="text-center min-w-[120px]">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground font-normal">{ev.ucNome}</span>
+                      <span>{ev.nome}</span>
+                    </div>
+                  </TableHead>
+                ))}
+                <TableHead className="text-center font-bold min-w-[100px] sticky right-0 bg-background z-10 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">Média Final</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {students.map(student => {
+                const studentGrades = grades?.filter((g: any) => g.alunoId === student.id) || [];
+                
+                // Agrupar por avaliação para garantir que pegamos a última nota de cada
+                const gradesByEval: Record<number, number> = {};
+                studentGrades.forEach((g: any) => {
+                  gradesByEval[g.avaliacaoId] = g.valor;
+                });
 
-              return (
-                <TableRow key={student.id}>
-                  <TableCell className="font-medium">{student.nome}</TableCell>
-                  {evaluations.map(ev => {
-                    const grade = studentGrades.find((g: any) => g.avaliacaoId === ev.id);
-                    return (
-                      <TableCell key={ev.id} className="text-center">
-                        {grade ? Number(grade.valor).toFixed(1) : "-"}
-                      </TableCell>
-                    );
-                  })}
-                  <TableCell className="text-center font-bold text-primary">
-                    {finalAvg > 0 ? Number(finalAvg).toFixed(1) : "-"}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+                // Calcular média final (considerando todas as notas de avaliações existentes)
+                const evalValues = Object.values(gradesByEval);
+                const finalAvg = evalValues.length > 0
+                  ? (evalValues.reduce((acc, val) => acc + val, 0) / evalValues.length)
+                  : 0;
+
+                return (
+                  <TableRow key={student.id}>
+                    <TableCell className="font-medium sticky left-0 bg-background z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">{student.nome}</TableCell>
+                    {evaluations.map(ev => {
+                      const grade = gradesByEval[ev.id];
+                      return (
+                        <TableCell key={ev.id} className="text-center">
+                          {grade !== undefined ? Number(grade).toFixed(1) : "-"}
+                        </TableCell>
+                      );
+                    })}
+                    <TableCell className="text-center font-bold text-primary sticky right-0 bg-background z-10 shadow-[-2px_0_5_px_-2px_rgba(0,0,0,0.1)]">
+                      {finalAvg > 0 ? Number(finalAvg).toFixed(1) : "-"}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   );
