@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -203,10 +203,26 @@ export default function ClassDetails() {
 }
 
 function GradingView({ evaluation, students, onBack }: { evaluation: any, students: any[], onBack: () => void }) {
-  const updateGradeMutation = useUpdateGrade();
+  const { id } = useParams<{ id: string }>();
+  const classId = Number(id);
+  const updateGradeMutation = useUpdateGrade(classId);
+  const { data: existingGrades } = useClassGrades(classId); 
   const { toast } = useToast();
   const [grades, setGrades] = useState<Record<number, string>>({});
   const [isSaving, setIsSaving] = useState(false);
+
+  // Initialize grades with existing values
+  useEffect(() => {
+    if (existingGrades) {
+      const initialGrades: Record<number, string> = {};
+      existingGrades
+        .filter((g: any) => g.avaliacaoId === evaluation.id)
+        .forEach((g: any) => {
+          initialGrades[g.alunoId] = g.valor.toString();
+        });
+      setGrades(initialGrades);
+    }
+  }, [existingGrades, evaluation.id]);
 
   const handleUpdate = (studentId: number, valor: string) => {
     setGrades(prev => ({ ...prev, [studentId]: valor }));
@@ -329,11 +345,18 @@ function FinalGradesTab({ classId, students, unidades }: { classId: number, stud
                 <TableCell className="font-medium">{student.nome}</TableCell>
                 {unidades.map(uc => {
                   const ucGrades = grades?.filter((g: any) => g.unidadeCurricularId === uc.id && g.alunoId === student.id) || [];
-                  const evaluationsAvg = ucGrades.length > 0 ? (ucGrades.reduce((acc: number, g: any) => acc + g.valor, 0) / ucGrades.length) : 0;
                   
-                  // Simplificação: Se houver integração com critérios, a média final pode ser a média simples entre avaliações e a nota de critérios
-                  // Como não temos a nota de critérios agregada aqui facilmente sem mais queries, vamos mostrar a média das avaliações por enquanto
-                  // O usuário pediu "Média de todas avaliações + a do critério"
+                  // Agrupar por avaliação para garantir que pegamos a última nota de cada
+                  const gradesByEval: Record<number, number> = {};
+                  ucGrades.forEach((g: any) => {
+                    gradesByEval[g.avaliacaoId] = g.valor;
+                  });
+                  
+                  const evalValues = Object.values(gradesByEval);
+                  const evaluationsAvg = evalValues.length > 0 
+                    ? (evalValues.reduce((acc, val) => acc + val, 0) / evalValues.length) 
+                    : 0;
+                  
                   const studentData = allNotes?.find(n => n.alunoId === student.id && n.unidadeCurricularId === uc.id);
                   const finalGrade = studentData?.notaFinal ?? evaluationsAvg;
                   

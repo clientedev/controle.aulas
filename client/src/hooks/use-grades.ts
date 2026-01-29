@@ -29,7 +29,7 @@ export function useUpdateGrade(turmaId: number) {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (data: z.infer<typeof api.notas.atualizar.input>) => {
+    mutationFn: async (data: any) => {
        const payload = {
         ...data,
         valor: Number(data.valor),
