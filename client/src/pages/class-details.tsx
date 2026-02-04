@@ -1573,14 +1573,16 @@ function AttendanceTab({ classId, students }: { classId: number, students: any[]
   const [data, setData] = useState(format(new Date(), "yyyy-MM-dd"));
   const { toast } = useToast();
   const { data: attendanceData, refetch } = useQuery<any[]>({
-    queryKey: ["/api/turmas", classId, "frequencia", data],
+    queryKey: ["/api/turmas", classId, "frequencia"],
     queryFn: async () => {
-      const res = await fetch(`/api/turmas/${classId}/frequencia?data=${data}`);
+      const res = await fetch(`/api/turmas/${classId}/frequencia`);
       if (!res.ok) return [];
       const result = await res.json();
       return Array.isArray(result) ? result : [];
     }
   });
+
+  const currentAttendance = attendanceData?.filter(a => a.data === data) || [];
 
   const mutation = useMutation({
     mutationFn: async (payload: any) => {
@@ -1608,8 +1610,32 @@ function AttendanceTab({ classId, students }: { classId: number, students: any[]
       alunoId,
       data,
       status: currentStatus === 1 ? 0 : 1,
-      horario: deviceTime
+      horario: currentStatus === 1 ? null : deviceTime
     });
+  };
+
+  const exportAttendance = () => {
+    if (!attendanceData || attendanceData.length === 0) {
+      toast({ title: "Erro", description: "Não há dados de frequência para exportar", variant: "destructive" });
+      return;
+    }
+
+    // Preparar dados para o Excel
+    // Cabeçalho: Aluno, e datas das frequências
+    const allDates = [...new Set(attendanceData.map(a => a.data))].sort();
+    const rows = students.map(student => {
+      const studentRow: any = { "Aluno": student.nome };
+      allDates.forEach(date => {
+        const record = attendanceData.find(a => a.alunoId === student.id && a.data === date);
+        studentRow[date] = record ? (record.status === 1 ? "Presente" : "Falta") : "-";
+      });
+      return studentRow;
+    });
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Frequência");
+    XLSX.writeFile(wb, `frequencia_${classData.nome}_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
   };
 
   return (
@@ -1620,6 +1646,9 @@ function AttendanceTab({ classId, students }: { classId: number, students: any[]
           <CardDescription>Registre a presença dos alunos</CardDescription>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={exportAttendance}>
+            <Download className="mr-2 h-4 w-4" /> Exportar Excel
+          </Button>
           <Link href="/frequency">
             <Button variant="outline" size="sm" className="bg-primary/5 text-primary border-primary/20">
               <Camera className="mr-2 h-4 w-4" />
@@ -1647,7 +1676,7 @@ function AttendanceTab({ classId, students }: { classId: number, students: any[]
           </TableHeader>
           <TableBody>
             {students.map((student) => {
-              const record = attendanceData?.find(a => a.alunoId === student.id);
+              const record = currentAttendance.find(a => a.alunoId === student.id);
               const isPresent = record ? record.status === 1 : false;
               
               return (
