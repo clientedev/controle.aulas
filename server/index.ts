@@ -139,7 +139,7 @@ import { sql } from "drizzle-orm";
     {
       port,
       host: "0.0.0.0",
-      exclusive: false,
+      exclusive: true,
     },
     () => {
       log(`serving on port ${port}`);
