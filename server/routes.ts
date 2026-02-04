@@ -622,6 +622,43 @@ export async function registerRoutes(
     res.status(201).json(comp);
   });
 
+  app.post("/api/salas/:id/computadores/bulk", autenticar, async (req, res) => {
+    const salaId = Number(req.params.id);
+    const { rows, cols } = req.body;
+    
+    if (!rows || !cols) {
+      return res.status(400).json({ mensagem: "Linhas e colunas são obrigatórias" });
+    }
+
+    const sala = await storage.getSala(salaId);
+    if (!sala) return res.status(404).json({ mensagem: "Sala não encontrada" });
+
+    const computadoresExistentes = await storage.getComputadoresDaSala(salaId);
+    let proximoNumero = computadoresExistentes.length > 0 
+      ? Math.max(...computadoresExistentes.map(c => c.numero)) + 1 
+      : 1;
+
+    const criados = [];
+    const containerWidth = 800; // Largura aproximada do container
+    const containerHeight = 600; // Altura aproximada do container
+    const cellWidth = containerWidth / cols;
+    const cellHeight = containerHeight / rows;
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const comp = await storage.criarComputador({
+          salaId,
+          numero: proximoNumero++,
+          posX: Math.round(c * cellWidth + cellWidth / 2),
+          posY: Math.round(r * cellHeight + cellHeight / 2),
+          alunoId: null
+        });
+        criados.push(comp);
+      }
+    }
+    res.status(201).json(criados);
+  });
+
   app.patch("/api/computadores/:id", autenticar, async (req: any, res) => {
     const id = Number(req.params.id);
     const { posX, posY, alunoId } = req.body;

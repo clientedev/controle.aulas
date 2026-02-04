@@ -99,6 +99,7 @@ export interface IStorage {
   atualizarSala(id: number, data: Partial<InsertSala>): Promise<Sala>;
   excluirSala(id: number): Promise<void>;
   getComputadoresDaSala(salaId: number): Promise<(Computador & { aluno?: Aluno; ocorrencias?: OcorrenciaComputador[] })[]>;
+  getSala(id: number): Promise<Sala | undefined>;
   criarComputador(data: InsertComputador): Promise<Computador>;
   atualizarComputador(id: number, data: Partial<InsertComputador>): Promise<Computador>;
   excluirComputador(id: number): Promise<void>;
@@ -695,6 +696,11 @@ export class DatabaseStorage implements IStorage {
   async getSalaDaTurma(turmaId: number): Promise<Sala | undefined> {
     const [sala] = await db.select().from(salas).where(eq(salas.turmaId, turmaId));
     return sala;
+  }
+
+  async getSala(id: number): Promise<Sala | undefined> {
+    const [s] = await db.select().from(salas).where(eq(salas.id, id));
+    return s;
   }
 
   async criarSala(data: InsertSala): Promise<Sala> {

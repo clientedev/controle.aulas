@@ -1825,6 +1825,39 @@ function MapaSalaTab({ classId, students }: { classId: number; students: any[] }
     }
   });
 
+  const [bulkRows, setBulkRows] = useState("1");
+  const [bulkCols, setBulkCols] = useState("1");
+  const [isBulkAdding, setIsBulkAdding] = useState(false);
+
+  const bulkAddMutation = useMutation({
+    mutationFn: async (payload: { salaId: number; rows: number; cols: number }) => {
+      const res = await fetch(`/api/salas/${payload.salaId}/computadores/bulk`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rows: payload.rows, cols: payload.cols }),
+      });
+      if (!res.ok) throw new Error("Erro ao adicionar computadores em massa");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.turmas.obter.path, classId] });
+      setIsBulkAdding(false);
+      toast({ title: "Sucesso", description: "Computadores adicionados com sucesso!" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    }
+  });
+
+  const handleBulkAdd = () => {
+    if (!salaData) return;
+    bulkAddMutation.mutate({
+      salaId: salaData.id,
+      rows: parseInt(bulkRows) || 1,
+      cols: parseInt(bulkCols) || 1
+    });
+  };
+
   const saveAnotacoesMutation = useMutation({
     mutationFn: async (text: string) => {
       const res = await fetch(`/api/salas/${salaData!.id}/anotacoes`, {
@@ -1970,6 +2003,48 @@ function MapaSalaTab({ classId, students }: { classId: number; students: any[] }
             <Button onClick={adicionarNovoComputador} data-testid="button-adicionar-computador">
               <Plus className="h-4 w-4 mr-2" /> Adicionar Computador
             </Button>
+            
+            <Dialog open={isBulkAdding} onOpenChange={setIsBulkAdding}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Layout className="h-4 w-4 mr-2" /> Em Massa
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Adicionar em Massa</DialogTitle>
+                  <DialogDescription>
+                    Informe linhas e colunas para organizar os novos PCs.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid grid-cols-2 gap-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Linhas</Label>
+                    <Input 
+                      type="number" 
+                      min="1" 
+                      value={bulkRows} 
+                      onChange={(e) => setBulkRows(e.target.value)} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Colunas</Label>
+                    <Input 
+                      type="number" 
+                      min="1" 
+                      value={bulkCols} 
+                      onChange={(e) => setBulkCols(e.target.value)} 
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsBulkAdding(false)}>Cancelar</Button>
+                  <Button onClick={handleBulkAdd} disabled={bulkAddMutation.isPending}>
+                    {bulkAddMutation.isPending ? "Adicionando..." : "Confirmar"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </CardHeader>
         <CardContent>
@@ -1982,7 +2057,7 @@ function MapaSalaTab({ classId, students }: { classId: number; students: any[] }
           <div 
             ref={canvasRef}
             className="relative border-2 border-dashed rounded-lg bg-muted/50"
-            style={{ height: "500px", minWidth: "100%" }}
+            style={{ height: "800px", minWidth: "100%" }}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={() => setDraggingId(null)}
