@@ -134,7 +134,7 @@ import { sql } from "drizzle-orm";
   // Other ports are firewalled. Default to 5000 if not specified.
   const port = parseInt(process.env.PORT || "5000", 10);
   
-  // Use a timeout to ensure the server starts immediately to satisfy Railway's health check
+  // Start listening IMMEDIATELY to satisfy Railway's health check
   httpServer.listen(
     {
       port,
@@ -155,6 +155,4 @@ import { sql } from "drizzle-orm";
       console.error("Railway: Database connection FAILED:", err.message);
     });
   }
-  
-  // No start application logic needed here for migrations
 })();
