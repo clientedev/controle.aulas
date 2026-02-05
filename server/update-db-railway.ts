@@ -20,6 +20,23 @@ async function updateDb() {
     `);
     console.log("Tabela 'ocorrencias_computador' verificada/criada.");
 
+    // Corrigir coluna status na tabela frequencia se necessário
+    await db.execute(sql`
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1 
+          FROM information_schema.columns 
+          WHERE table_name = 'frequencia' 
+          AND column_name = 'status' 
+          AND data_type = 'character varying'
+        ) THEN
+          ALTER TABLE frequencia ALTER COLUMN status TYPE integer USING status::integer;
+        END IF;
+      END $$;
+    `);
+    console.log("Coluna 'status' na tabela 'frequencia' verificada/convertida.");
+
     console.log("Sincronização concluída com sucesso!");
     process.exit(0);
   } catch (err) {

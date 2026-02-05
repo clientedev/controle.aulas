@@ -1,0 +1,190 @@
+Architecture
+Observability
+Logs
+Settings
+
+
+
+1
+
+
+
+
+
+
+
+
+
+controle.aulas
+Deployments
+Variables
+Metrics
+Settings
+controleaulas-production.up.railway.app
+22.22.0node@22.22.0
+us-east4-eqdc4a
+1 Replica
+
+
+
+History
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+controle.aulas
+/
+e1257620
+Crashed
+
+Feb 5, 2026, 9:05 AM GMT-3
+controleaulas-production.up.railway.app
+Get Help
+Details
+Build Logs
+Deploy Logs
+HTTP Logs
+Network Flow Logs
+Filter and search logs
+
+You reached the start of the range
+Feb 5, 2026, 9:05 AM
+Starting Container
+> tsx server/update-db-railway.ts && npx drizzle-kit push --force
+> rest-express@1.0.0 prestart
+npm warn config production Use `--omit=dev` instead.
+Iniciando atualização do banco de dados no Railway...
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "anotacoes" of relation "salas" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+Coluna 'anotacoes' verificada/adicionada na tabela 'salas'.
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "ocorrencias_computador" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+Tabela 'ocorrencias_computador' verificada/criada.
+Sincronização concluída com sucesso!
+npm warn config production Use `--omit=dev` instead.
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/app/drizzle.config.ts'
+Using 'pg' driver for database querying
+[⣷] Pulling schema from database...
+[⣯] Pulling schema from database...
+[⣟] Pulling schema from database...
+[⡿] Pulling schema from database...
+[⢿] Pulling schema from database...
+[✓] Pulling schema from database...
+  constraint: undefined,
+  position: undefined,
+  file: 'tablecmds.c',
+  internalPosition: undefined,
+  line: '12932',
+  internalQuery: undefined,
+  routine: 'ATPrepAlterColumnType'
+  where: undefined,
+}
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+    at async pgPush (/app/node_modules/drizzle-kit/bin.cjs:84432:13)
+  dataType: undefined,
+    at async Object.handler (/app/node_modules/drizzle-kit/bin.cjs:93871:9)
+    at async run (/app/node_modules/drizzle-kit/bin.cjs:93117:7) {
+  length: 183,
+  severity: 'ERROR',
+error: column "status" cannot be cast automatically to type integer
+  code: '42804',
+    at /app/node_modules/pg-pool/index.js:45:11
+  detail: undefined,
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+  hint: 'You might need to specify "USING status::integer".',
+    at async Object.query (/app/node_modules/drizzle-kit/bin.cjs:80622:26)
+> rest-express@1.0.0 start
+> node --max-old-space-size=450 dist/index.cjs
+node:internal/url:1610
+    throw new ERR_INVALID_ARG_TYPE('path', ['string', 'URL'], path);
+    ^
+TypeError [ERR_INVALID_ARG_TYPE]: The "path" argument must be of type string or an instance of URL. Received undefined
+    at fileURLToPath (node:internal/url:1610:11)
+    at Object.<anonymous> (/app/dist/index.cjs:80:162219)
+    at Module._compile (node:internal/modules/cjs/loader:1706:14)
+    at Object..js (node:internal/modules/cjs/loader:1839:10)
+    at Module.load (node:internal/modules/cjs/loader:1441:32)
+    at Function._load (node:internal/modules/cjs/loader:1263:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+    at node:internal/main/run_main_module:36:49 {
+  code: 'ERR_INVALID_ARG_TYPE'
+}
+Node.js v22.22.0
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 prestart
+> tsx server/update-db-railway.ts && npx drizzle-kit push --force
+npm warn config production Use `--omit=dev` instead.
+Iniciando atualização do banco de dados no Railway...
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "anotacoes" of relation "salas" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+Coluna 'anotacoes' verificada/adicionada na tabela 'salas'.
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "ocorrencias_computador" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+Tabela 'ocorrencias_computador' verificada/criada.
+Sincronização concluída com sucesso!
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/app/drizzle.config.ts'
+Using 'pg' driver for database querying
+[⣷] Pulling schema from database...
+[⣯] Pulling schema from database...
+[⣟] Pulling schema from database...
+[⡿] Pulling schema from database...
+[⢿] Pulling schema from database...
+[⣻] Pulling schema from database...
+[✓] Pulling schema from database...
+error: column "status" cannot be cast automatically to type integer
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Object.query (/app/node_modules/drizzle-kit/bin.cjs:80622:26)
+    at async pgPush (/app/node_modules/drizzle-kit/bin.cjs:84432:13)
+    at async Object.handler (/app/node_modules/drizzle-kit/bin.cjs:93871:9)
+    at async run (/app/node_modules/drizzle-kit/bin.cjs:93117:7) {
+  length: 183,
