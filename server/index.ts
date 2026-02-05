@@ -4,6 +4,8 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
+import { db } from "./db";
+import { usuarios } from "@shared/schema";
 
 let __filename: string;
 let __dirname: string;
@@ -12,7 +14,6 @@ try {
   __filename = fileURLToPath(import.meta.url);
   __dirname = dirname(__filename);
 } catch (e) {
-  // Fallback for CJS/dist environments where import.meta.url might be undefined
   __filename = "";
   __dirname = process.cwd();
 }
@@ -74,8 +75,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static files from public/models with correct MIME types
-// In production, models are in dist/public/models; in dev, they're in public/models
 const modelsPath = process.env.NODE_ENV === "production"
   ? path.join(__dirname, "public", "models")
   : path.join(process.cwd(), "public", "models");
@@ -88,53 +87,9 @@ app.use("/models", express.static(modelsPath, {
   }
 }));
 
-import { db } from "./db";
-import { usuarios } from "@shared/schema";
-import { sql } from "drizzle-orm";
-
 (async () => {
-  // Run database migrations on start for production/external DBs
-  if (process.env.DATABASE_URL) {
-    try {
-      console.log("Railway: Running database sync (db:push)...");
-      // Import dynamic to avoid loading drizzle-kit in runtime if possible, 
-      // but here we just want to ensure the schema is synced.
-      // Since we are using drizzle-kit push in package.json, we'll rely on that.
-    } catch (err) {
-      console.error("Database sync failed:", err);
-    }
-  }
-
-  await registerRoutes(httpServer, app);
-
-  app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    console.error("Internal Server Error:", err);
-
-    if (res.headersSent) {
-      return next(err);
-    }
-
-    return res.status(status).json({ message });
-  });
-
-  // Importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (process.env.NODE_ENV === "production") {
-    serveStatic(app);
-  } else {
-    const { setupVite } = await import("./vite");
-    await setupVite(httpServer, app);
-  }
-
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
   const port = parseInt(process.env.PORT || "5000", 10);
   
-  // Start listening IMMEDIATELY to satisfy Railway's health check
   httpServer.listen(
     {
       port,
@@ -146,13 +101,35 @@ import { sql } from "drizzle-orm";
     },
   );
 
-  // Test database connection AFTER the server is already listening
-  if (process.env.DATABASE_URL) {
-    console.log("Railway: Initializing database check (post-startup)...");
-    db.select().from(usuarios).limit(1).then(() => {
-      console.log("Railway: Database connection successful.");
-    }).catch(err => {
-      console.error("Railway: Database connection FAILED:", err.message);
+  try {
+    await registerRoutes(httpServer, app);
+
+    if (process.env.NODE_ENV === "production") {
+      serveStatic(app);
+    } else {
+      const { setupVite } = await import("./vite");
+      await setupVite(httpServer, app);
+    }
+
+    if (process.env.DATABASE_URL) {
+      console.log("Railway: Initializing database check (post-startup)...");
+      db.select().from(usuarios).limit(1).then(() => {
+        console.log("Railway: Database connection successful.");
+      }).catch(err => {
+        console.error("Railway: Database connection FAILED:", err.message);
+      });
+    }
+
+    app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
+      console.error("Internal Server Error:", err);
+      if (res.headersSent) {
+        return next(err);
+      }
+      return res.status(status).json({ message });
     });
+  } catch (err) {
+    console.error("Critical initialization error:", err);
   }
 })();
