@@ -11,8 +11,13 @@ let __filename_val: string;
 let __dirname_val: string;
 
 try {
-  __filename_val = fileURLToPath(import.meta.url);
-  __dirname_val = dirname(__filename_val);
+  if (typeof import.meta.url === "string") {
+    __filename_val = fileURLToPath(import.meta.url);
+    __dirname_val = dirname(__filename_val);
+  } else {
+    __filename_val = "";
+    __dirname_val = process.cwd();
+  }
 } catch (e) {
   __filename_val = "";
   __dirname_val = process.cwd();
