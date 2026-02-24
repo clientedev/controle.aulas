@@ -24,18 +24,32 @@ async function updateDb() {
     await db.execute(sql`
       DO $$
       BEGIN
+        -- frequencia.status
         IF EXISTS (
-          SELECT 1 
-          FROM information_schema.columns 
-          WHERE table_name = 'frequencia' 
-          AND column_name = 'status' 
-          AND data_type = 'character varying'
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'frequencia' AND column_name = 'status' AND data_type != 'integer'
         ) THEN
           ALTER TABLE frequencia ALTER COLUMN status TYPE integer USING status::integer;
         END IF;
+
+        -- ocorrencias_computador.resolvido
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'ocorrencias_computador' AND column_name = 'resolvido' AND data_type != 'integer'
+        ) THEN
+          ALTER TABLE ocorrencias_computador ALTER COLUMN resolvido TYPE integer USING resolvido::integer;
+        END IF;
+
+        -- criterios_atendidos.atendido
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'criterios_atendidos' AND column_name = 'atendido' AND data_type != 'integer'
+        ) THEN
+          ALTER TABLE criterios_atendidos ALTER COLUMN atendido TYPE integer USING atendido::integer;
+        END IF;
       END $$;
     `);
-    console.log("Coluna 'status' na tabela 'frequencia' verificada/convertida.");
+    console.log("Colunas de status/inteiros verificadas e convertidas.");
 
     console.log("Sincronização concluída com sucesso!");
     process.exit(0);

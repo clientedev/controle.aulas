@@ -1,0 +1,93 @@
+error: column "status" cannot be cast automatically to type integer
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Object.query (/app/node_modules/drizzle-kit/bin.cjs:80622:26)
+    at async pgPush (/app/node_modules/drizzle-kit/bin.cjs:84432:13)
+    at async Object.handler (/app/node_modules/drizzle-kit/bin.cjs:93871:9)
+    at async run (/app/node_modules/drizzle-kit/bin.cjs:93117:7) {
+  length: 183,
+  severity: 'ERROR',
+  code: '42804',
+  detail: undefined,
+  hint: 'You might need to specify "USING status::integer".',
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'tablecmds.c',
+  line: '12932',
+  routine: 'ATPrepAlterColumnType'
+}
+> rest-express@1.0.0 start
+> node --max-old-space-size=450 dist/index.cjs
+node:internal/url:1610
+    throw new ERR_INVALID_ARG_TYPE('path', ['string', 'URL'], path);
+    ^
+TypeError [ERR_INVALID_ARG_TYPE]: The "path" argument must be of type string or an instance of URL. Received undefined
+    at fileURLToPath (node:internal/url:1610:11)
+    at Object.<anonymous> (/app/dist/index.cjs:80:162219)
+    at Module._compile (node:internal/modules/cjs/loader:1706:14)
+    at Object..js (node:internal/modules/cjs/loader:1839:10)
+    at Module.load (node:internal/modules/cjs/loader:1441:32)
+    at Function._load (node:internal/modules/cjs/loader:1263:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+    at node:internal/main/run_main_module:36:49 {
+  code: 'ERR_INVALID_ARG_TYPE'
+}
+Node.js v22.22.0
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 prestart
+> tsx server/update-db-railway.ts && npx drizzle-kit push --force
+  severity: 'NOTICE',
+Iniciando atualização do banco de dados no Railway...
+{
+  severity_local: 'NOTICE',
+  code: '42701',
+  message: 'column "anotacoes" of relation "salas" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+Sincronização concluída com sucesso!
+npm warn config production Use `--omit=dev` instead.
+{
+  severity_local: 'NOTICE',
+}
+  severity: 'NOTICE',
+Coluna 'anotacoes' verificada/adicionada na tabela 'salas'.
+  code: '42P07',
+Tabela 'ocorrencias_computador' verificada/criada.
+Coluna 'status' na tabela 'frequencia' verificada/convertida.
+  message: 'relation "ocorrencias_computador" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/app/drizzle.config.ts'
+Using 'pg' driver for database querying
+[⣷] Pulling schema from database...
+[⣯] Pulling schema from database...
+[⣟] Pulling schema from database...
+[⡿] Pulling schema from database...
+[⢿] Pulling schema from database...
+error: column "status" cannot be cast automatically to type integer
+[⣻] Pulling schema from database...
+    at /app/node_modules/pg-pool/index.js:45:11
+[⣽] Pulling schema from database...
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+[✓] Pulling schema from database...
+    at async run (/app/node_modules/drizzle-kit/bin.cjs:93117:7) {
+  length: 183,
+  code: '42804',
+  severity: 'ERROR',
+  detail: undefined,
+  position: undefined,
+  hint: 'You might need to specify "USING status::integer".',
+    at async Object.query (/app/node_modules/drizzle-kit/bin.cjs:80622:26)
