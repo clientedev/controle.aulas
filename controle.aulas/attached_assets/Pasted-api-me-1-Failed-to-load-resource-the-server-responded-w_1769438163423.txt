@@ -1,0 +1,60 @@
+api/me:1  Failed to load resource: the server responded with a status of 401 ()
+index-BCI6lYnQ.js:3963 Loading face-api models from: /models/
+index-BCI6lYnQ.js:3963 Models loaded successfully
+index-BCI6lYnQ.js:3963 Totem: Processamento concluído. 5 faces carregadas.
+index-BCI6lYnQ.js:3963 Error: fetchImage - expected blob type to be of type image/*, instead have: text/plain, for url: data:,
+    at index-BCI6lYnQ.js:3963:59007
+    at u (index-BCI6lYnQ.js:3963:32496)
+    at Object.next (index-BCI6lYnQ.js:3963:31800)
+    at o (index-BCI6lYnQ.js:3963:31382)
+z @ index-BCI6lYnQ.js:3963
+index-BCI6lYnQ.js:3963 Error: fetchImage - expected blob type to be of type image/*, instead have: text/plain, for url: data:,
+    at index-BCI6lYnQ.js:3963:59007
+    at u (index-BCI6lYnQ.js:3963:32496)
+    at Object.next (index-BCI6lYnQ.js:3963:31800)
+    at o (index-BCI6lYnQ.js:3963:31382)
+z @ index-BCI6lYnQ.js:3963
+index-BCI6lYnQ.js:3963 Error: fetchImage - expected blob type to be of type image/*, instead have: text/plain, for url: data:,
+    at index-BCI6lYnQ.js:3963:59007
+    at u (index-BCI6lYnQ.js:3963:32496)
+    at Object.next (index-BCI6lYnQ.js:3963:31800)
+    at o (index-BCI6lYnQ.js:3963:31382)
+z @ index-BCI6lYnQ.js:3963
+index-BCI6lYnQ.js:3963 Totem: Aluno identificado! Carlos Roberto Lima
+index-BCI6lYnQ.js:3963 Totem: Parando track video
+index-BCI6lYnQ.js:3963 Totem: Enviando POST para turma 1 - Aluno 3
+frequencia:1  Failed to load resource: the server responded with a status of 500 ()
+index-BCI6lYnQ.js:3963 Totem: Erro ao registrar: Error: 500: {"message":"column \"metodo\" does not exist"}
+    at zA (index-BCI6lYnQ.js:8:96893)
+    at async Xm (index-BCI6lYnQ.js:8:97094)
+    at async Object.mutationFn (index-BCI6lYnQ.js:3963:143594)
+onError @ index-BCI6lYnQ.js:3963
+index-BCI6lYnQ.js:3963 Totem: Aluno identificado! Carlos Roberto Lima
+index-BCI6lYnQ.js:3963 Totem: Parando track video
+index-BCI6lYnQ.js:3963 Totem: Enviando POST para turma 1 - Aluno 3
+index-BCI6lYnQ.js:8  POST https://controleaulas-production.up.railway.app/api/turmas/1/frequencia 500 (Internal Server Error)
+Xm @ index-BCI6lYnQ.js:8
+mutationFn @ index-BCI6lYnQ.js:3963
+await in mutationFn
+fn @ index-BCI6lYnQ.js:8
+x @ index-BCI6lYnQ.js:8
+start @ index-BCI6lYnQ.js:8
+execute @ index-BCI6lYnQ.js:8
+await in execute
+mutate @ index-BCI6lYnQ.js:8
+(anonymous) @ index-BCI6lYnQ.js:8
+z @ index-BCI6lYnQ.js:3963
+await in z
+(anonymous) @ index-BCI6lYnQ.js:3963
+index-BCI6lYnQ.js:3963 Totem: Erro ao registrar: Error: 500: {"message":"column \"metodo\" does not exist"}
+    at zA (index-BCI6lYnQ.js:8:96893)
+    at async Xm (index-BCI6lYnQ.js:8:97094)
+    at async Object.mutationFn (index-BCI6lYnQ.js:3963:143594)
+onError @ index-BCI6lYnQ.js:3963
+execute @ index-BCI6lYnQ.js:8
+await in execute
+mutate @ index-BCI6lYnQ.js:8
+(anonymous) @ index-BCI6lYnQ.js:8
+z @ index-BCI6lYnQ.js:3963
+await in z
+(anonymous) @ index-BCI6lYnQ.js:3963

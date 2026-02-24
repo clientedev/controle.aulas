@@ -1,0 +1,78 @@
+Starting Container
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 db:push:accept
+> drizzle-kit push --force --accept-data-loss
+> rest-express@1.0.0 prestart
+> npm run db:push:accept
+npm warn config production Use `--omit=dev` instead.
+Unrecognized options for command 'push': --accept-data-loss
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 prestart
+> npm run db:push:accept
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 db:push:accept
+> drizzle-kit push --force --accept-data-loss
+Unrecognized options for command 'push': --accept-data-loss
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 prestart
+> npm run db:push:accept
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 db:push:accept
+> drizzle-kit push --force --accept-data-loss
+Unrecognized options for command 'push': --accept-data-loss
+> rest-express@1.0.0 prestart
+> npm run db:push:accept
+npm warn config production Use `--omit=dev` instead.
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 db:push:accept
+> drizzle-kit push --force --accept-data-loss
+Unrecognized options for command 'push': --accept-data-loss
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 prestart
+> npm run db:push:accept
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 db:push:accept
+> drizzle-kit push --force --accept-data-loss
+Unrecognized options for command 'push': --accept-data-loss
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 prestart
+> npm run db:push:accept
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 db:push:accept
+> drizzle-kit push --force --accept-data-loss
+Unrecognized options for command 'push': --accept-data-loss
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 prestart
+> npm run db:push:accept
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 db:push:accept
+> drizzle-kit push --force --accept-data-loss
+Unrecognized options for command 'push': --accept-data-loss
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 prestart
+> npm run db:push:accept
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 db:push:accept
+> drizzle-kit push --force --accept-data-loss
+Unrecognized options for command 'push': --accept-data-loss
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 prestart
+> npm run db:push:accept
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 db:push:accept
+> drizzle-kit push --force --accept-data-loss
+Unrecognized options for command 'push': --accept-data-loss
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 prestart
+> npm run db:push:accept
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 db:push:accept
+> drizzle-kit push --force --accept-data-loss
+Unrecognized options for command 'push': --accept-data-loss
+> npm run db:push:accept
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 prestart
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 db:push:accept
+> drizzle-kit push --force --accept-data-loss
+Unrecognized options for command 'push': --accept-data-loss
