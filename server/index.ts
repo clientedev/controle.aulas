@@ -7,36 +7,16 @@ import { fileURLToPath } from "url";
 import { db } from "./db";
 import { usuarios } from "@shared/schema";
 
-let __filename: string;
-let __dirname: string;
+let __filename_val: string;
+let __dirname_val: string;
 
 try {
-  __filename = fileURLToPath(import.meta.url);
-  __dirname = dirname(__filename);
+  __filename_val = fileURLToPath(import.meta.url);
+  __dirname_val = dirname(__filename_val);
 } catch (e) {
-  __filename = "";
-  __dirname = process.cwd();
+  __filename_val = "";
+  __dirname_val = process.cwd();
 }
-
-const app = express();
-app.set("trust proxy", 1);
-const httpServer = createServer(app);
-
-declare module "http" {
-  interface IncomingMessage {
-    rawBody: unknown;
-  }
-}
-
-app.use(
-  express.json({
-    verify: (req, _res, buf) => {
-      req.rawBody = buf;
-    },
-  }),
-);
-
-app.use(express.urlencoded({ extended: false }));
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -48,6 +28,26 @@ export function log(message: string, source = "express") {
 
   console.log(`${formattedTime} [${source}] ${message}`);
 }
+
+declare module "http" {
+  interface IncomingMessage {
+    rawBody: unknown;
+  }
+}
+
+const app = express();
+app.set("trust proxy", 1);
+const httpServer = createServer(app);
+
+app.use(
+  express.json({
+    verify: (req, _res, buf) => {
+      req.rawBody = buf;
+    },
+  }),
+);
+
+app.use(express.urlencoded({ extended: false }));
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -75,8 +75,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// Move modelsPath calculation here to ensure __dirname_val is set
 const modelsPath = process.env.NODE_ENV === "production"
-  ? path.join(__dirname, "public", "models")
+  ? path.join(__dirname_val || process.cwd(), "public", "models")
   : path.join(process.cwd(), "public", "models");
 
 app.use("/models", express.static(modelsPath, {
